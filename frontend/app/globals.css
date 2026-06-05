@@ -5,26 +5,81 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow-x: hidden; }
 body {
-  background: hsl(240,25%,4%);
+  background: hsl(240,28%,3.5%);
   color: hsl(0,0%,96%);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
+/* ── Premium thin scrollbar (replaces the chunky default) ───────────────── */
+* { scrollbar-width: thin; scrollbar-color: rgba(139,92,246,0.28) transparent; }
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(hsl(258,80%,60%), hsl(250,70%,45%));
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background-color: hsl(258,85%,68%); }
+/* Pages that should never show a bar (the hero fits the viewport) */
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+html { scroll-behavior: smooth; }
+
+/* ── Motion ─────────────────────────────────────────────────────────────── */
 @keyframes fadeUp {
   from { opacity:0; transform:translateY(24px); filter:blur(6px); }
   to   { opacity:1; transform:translateY(0);    filter:blur(0); }
 }
 @keyframes spinSlow { to { transform: rotate(360deg); } }
+.animate-fade-up { opacity: 0; animation: fadeUp 0.8s cubic-bezier(0.16,1,0.3,1) forwards; }
+.animate-spin-slow { animation: spinSlow 5s linear infinite; }
 
-.animate-fade-up {
-  opacity: 0;
-  animation: fadeUp 0.72s cubic-bezier(0.16,1,0.3,1) forwards;
-}
-.animate-spin-slow { animation: spinSlow 4s linear infinite; }
+.step-content { max-height: 0; overflow: hidden; transition: max-height 0.5s cubic-bezier(0.16,1,0.3,1); }
+.step-content.open { max-height: 800px; }
 
-.step-content {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.5s cubic-bezier(0.16,1,0.3,1);
+/* ── Premium animated background (aurora + grid + grain) ─────────────────── */
+@keyframes auroraA {
+  0%,100% { transform: translate3d(-6%,-3%,0) scale(1);    }
+  50%     { transform: translate3d(8%,6%,0)   scale(1.25); }
 }
-.step-content.open { max-height: 700px; }
+@keyframes auroraB {
+  0%,100% { transform: translate3d(5%,4%,0)   scale(1.15); }
+  50%     { transform: translate3d(-7%,-6%,0) scale(0.95); }
+}
+@keyframes auroraC {
+  0%,100% { transform: translate3d(0,5%,0)    scale(1);    }
+  50%     { transform: translate3d(4%,-5%,0)  scale(1.2);  }
+}
+
+.bg-aurora { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.bg-aurora .blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.5; will-change: transform; }
+.bg-aurora .b1 { width: 46vw; height: 46vw; left: -8vw;  top: -10vw;
+  background: radial-gradient(circle at 30% 30%, #7c3aed, transparent 70%); animation: auroraA 22s ease-in-out infinite; }
+.bg-aurora .b2 { width: 42vw; height: 42vw; right: -6vw; top: 6vh;
+  background: radial-gradient(circle at 50% 50%, #4f46e5, transparent 70%); animation: auroraB 26s ease-in-out infinite; }
+.bg-aurora .b3 { width: 38vw; height: 38vw; left: 28vw;  bottom: -16vw;
+  background: radial-gradient(circle at 50% 50%, #06b6d4, transparent 70%); opacity: 0.32; animation: auroraC 30s ease-in-out infinite; }
+
+/* Fine technical grid, faded toward edges */
+.bg-grid { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px);
+  background-size: 64px 64px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 35%, #000 30%, transparent 78%);
+          mask-image: radial-gradient(ellipse 80% 60% at 50% 35%, #000 30%, transparent 78%);
+}
+/* Subtle film grain for a premium, non-flat finish */
+.bg-grain { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.04; mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+/* Top + bottom vignette for depth */
+.bg-vignette { position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(124,58,237,0.10), transparent 60%),
+    linear-gradient(to bottom, transparent 55%, hsl(240,28%,3.5%) 100%); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bg-aurora .blob { animation: none; }
+}

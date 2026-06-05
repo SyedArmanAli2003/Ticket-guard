@@ -4,7 +4,7 @@ import HeroSection from "@/components/HeroSection"
 
 export default function HomePage() {
   return (
-    <div style={{ background: "hsl(240,25%,4%)", minHeight: "100vh" }}>
+    <div className="no-scrollbar" style={{ background: "hsl(240,28%,3.5%)", height: "100dvh", overflow: "hidden" }}>
       <Navbar />
       <HeroSection />
     </div>

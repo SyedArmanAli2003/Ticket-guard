@@ -1,7 +1,7 @@
 "use client"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import ParticleBackground from "@/components/ParticleBackgroundWrapper"
+import PremiumBackground from "@/components/PremiumBackground"
 import { API } from "@/lib/config"
 
 export default function HeroSection() {
@@ -9,153 +9,81 @@ export default function HeroSection() {
   const [planCount, setPlanCount] = useState<number | null>(null)
 
   useEffect(() => {
-    fetch(API.stats)
-      .then(r => r.json())
-      .then(d => setPlanCount(d.total_plans))
-      .catch(() => {})
+    fetch(API.stats).then(r => r.json()).then(d => setPlanCount(d.total_plans)).catch(() => {})
   }, [])
 
   return (
-    <section
-      className="relative min-h-screen flex items-end overflow-hidden"
-      style={{ background: "hsl(240,25%,4%)" }}
-    >
-      <ParticleBackground />
+    <section className="relative flex flex-col items-center justify-center overflow-hidden px-6"
+      style={{ height: "100dvh", paddingTop: "6rem", paddingBottom: "2rem", background: "hsl(240,28%,3.5%)" }}>
+      <PremiumBackground />
 
-      {/* Gradient overlay */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background: "linear-gradient(to top, hsl(240,25%,4%) 0%, rgba(10,8,20,0.75) 35%, transparent 65%)",
-          zIndex: 1,
-        }}
-      />
-
-      {/* Hero content — bottom-left */}
-      <div
-        className="relative w-full px-8 md:px-14 pb-14 md:pb-20 pt-28"
-        style={{ maxWidth: "min(90%, 740px)", transform: "translateZ(0)", zIndex: 2 }}
-      >
-        {/* Spinning pill badge */}
-        <div
-          className="animate-fade-up inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 mb-7 text-xs font-medium select-none"
-          style={{
-            animationDelay: "0.1s",
-            background: "rgba(124,58,237,0.12)",
-            border: "1px solid rgba(124,58,237,0.3)",
-            color: "hsl(258,80%,78%)",
-          }}
-        >
+      <div className="relative z-10 w-full max-w-3xl text-center">
+        {/* Badge */}
+        <div className="animate-fade-up inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6 text-xs font-medium select-none"
+          style={{ animationDelay: "0.05s", background: "rgba(124,58,237,0.10)",
+            border: "1px solid rgba(139,92,246,0.25)", color: "hsl(258,80%,80%)",
+            backdropFilter: "blur(8px)" }}>
           <span className="animate-spin-slow inline-block leading-none">✦</span>
-          Gemini · Agent Builder · MongoDB MCP
+          8-agent team · Gemini · Google ADK · MongoDB MCP
         </div>
 
-        {/* Heading */}
-        <h1
-          className="animate-fade-up font-bold uppercase leading-[1.07] tracking-[-0.03em] mb-5"
-          style={{ fontSize: "clamp(2.4rem,5.8vw,4.8rem)", animationDelay: "0.2s" }}
-        >
-          <span style={{ color: "rgba(255,255,255,0.5)", fontWeight: 300, display: "block" }}>
-            Turn your idea into a
-          </span>
+        {/* Headline */}
+        <h1 className="animate-fade-up font-bold tracking-[-0.035em] mb-5"
+          style={{ animationDelay: "0.15s", fontSize: "clamp(2.1rem,5vw,3.6rem)", lineHeight: 1.06 }}>
+          <span style={{ color: "rgba(255,255,255,0.55)", fontWeight: 300 }}>Turn one sentence into an </span>
           <span style={{
-            color: "hsl(258,85%,74%)", fontWeight: 700, display: "block",
-            textShadow: "0 0 55px rgba(139,92,246,0.55), 0 0 110px rgba(139,92,246,0.2)",
-          }}>
-            Business Plan
-          </span>
-          <span style={{ color: "rgba(255,255,255,0.95)", fontWeight: 700, display: "block" }}>
-            in 60 seconds.
-          </span>
+            background: "linear-gradient(110deg, #c4b5fd 0%, #8b5cf6 45%, #6366f1 100%)",
+            WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent",
+            textShadow: "0 0 60px rgba(139,92,246,0.35)",
+          }}>investor-grade business plan.</span>
         </h1>
 
-        <p
-          className="animate-fade-up font-light mb-3"
-          style={{ fontSize: "clamp(1rem,1.8vw,1.3rem)", color: "rgba(255,255,255,0.65)", animationDelay: "0.38s" }}
-        >
-          No MBA required. No consultants. Just describe your idea.
+        {/* Subline */}
+        <p className="animate-fade-up mx-auto mb-8 font-light"
+          style={{ animationDelay: "0.3s", maxWidth: "600px",
+            fontSize: "clamp(0.9rem,1.4vw,1.1rem)", color: "rgba(255,255,255,0.6)", lineHeight: 1.55 }}>
+          A team of eight Gemini agents researches your market live — grounded in
+          MongoDB Atlas Vector Search via the MCP server — then validates, models
+          the financials, stress-tests the risks, and hands you a 30/60/90-day plan.
         </p>
 
-        <p
-          className="animate-fade-up font-light mb-8"
-          style={{
-            fontSize: "clamp(0.78rem,1.1vw,0.93rem)",
-            color: "rgba(255,255,255,0.32)",
-            lineHeight: "1.8", maxWidth: "500px",
-            animationDelay: "0.5s",
-          }}
-        >
-          A Gemini agent (Google Cloud Agent Builder / ADK) that researches your
-          market live through the MongoDB MCP server and Atlas Vector Search —
-          validating the idea, building personas, projecting financials, analyzing
-          risk, and handing you a 30/60/90-day action plan.
-        </p>
-
-        {/* CTA buttons */}
-        <div className="animate-fade-up flex flex-wrap gap-3" style={{ animationDelay: "0.62s" }}>
-          <button
-            onClick={() => router.push("/generate")}
-            style={{
-              background: "hsl(258,85%,64%)", color: "#fff",
-              padding: "0.9rem 2rem", borderRadius: "6px",
-              fontWeight: 600, fontSize: "0.875rem",
-              border: "none", cursor: "pointer",
-              transition: "box-shadow 0.25s ease, transform 0.15s ease",
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.boxShadow = "0 0 32px rgba(139,92,246,0.5)"
-              e.currentTarget.style.transform = "translateY(-1px)"
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.boxShadow = "none"
-              e.currentTarget.style.transform = "translateY(0)"
-            }}
-          >
-            Generate My Plan — Free →
+        {/* CTAs */}
+        <div className="animate-fade-up flex flex-wrap items-center justify-center gap-3" style={{ animationDelay: "0.45s" }}>
+          <button onClick={() => router.push("/generate")}
+            className="group relative px-7 py-3.5 rounded-xl font-semibold text-sm text-white cursor-pointer transition-all duration-200"
+            style={{ background: "linear-gradient(180deg, hsl(258,85%,64%), hsl(252,80%,55%))",
+              boxShadow: "0 8px 30px rgba(124,58,237,0.35)" }}
+            onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 12px 40px rgba(124,58,237,0.5)" }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 8px 30px rgba(124,58,237,0.35)" }}>
+            Generate my plan — free →
           </button>
-
-          <button
-            onClick={() => router.push("/generate?demo=true")}
-            style={{
-              background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.8)",
-              border: "1px solid rgba(255,255,255,0.1)",
-              padding: "0.9rem 2rem", borderRadius: "6px",
-              fontWeight: 500, fontSize: "0.875rem", cursor: "pointer",
-              transition: "background 0.2s ease, border-color 0.2s ease",
-            }}
-            onMouseEnter={e => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.09)"
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.2)"
-            }}
-            onMouseLeave={e => {
-              e.currentTarget.style.background = "rgba(255,255,255,0.05)"
-              e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)"
-            }}
-          >
-            See Example Plan
+          <button onClick={() => router.push("/generate?demo=true")}
+            className="px-7 py-3.5 rounded-xl font-medium text-sm cursor-pointer transition-all duration-200"
+            style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.8)",
+              border: "1px solid rgba(255,255,255,0.12)", backdropFilter: "blur(8px)" }}
+            onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.09)")}
+            onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")}>
+            Watch a live demo
           </button>
         </div>
 
-        {/* Tech pills */}
-        <div className="animate-fade-up flex items-center flex-wrap gap-2 mt-7" style={{ animationDelay: "0.78s" }}>
-          <span style={{ color: "rgba(255,255,255,0.2)", fontSize: "0.72rem" }}>Powered by</span>
-          {["🍃 MongoDB Atlas","✦ Gemini 2.5","⚙ Agent Builder (ADK)","◈ Google Cloud Run"].map(l => (
-            <span key={l} style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.09)",
-              color: "rgba(255,255,255,0.38)",
-              fontSize: "0.7rem", padding: "0.25rem 0.75rem", borderRadius: "999px",
-            }}>
-              {l}
-            </span>
-          ))}
+        {/* Trust row */}
+        <div className="animate-fade-up mt-10 flex flex-col items-center gap-3" style={{ animationDelay: "0.6s" }}>
+          <div className="flex items-center flex-wrap justify-center gap-x-5 gap-y-2"
+            style={{ color: "rgba(255,255,255,0.32)", fontSize: "0.72rem", letterSpacing: "0.06em" }}>
+            <span>🍃 MongoDB Atlas</span>
+            <span style={{ color: "rgba(255,255,255,0.12)" }}>·</span>
+            <span>✦ Gemini 2.5</span>
+            <span style={{ color: "rgba(255,255,255,0.12)" }}>·</span>
+            <span>⚙ Agent Builder (ADK)</span>
+            <span style={{ color: "rgba(255,255,255,0.12)" }}>·</span>
+            <span>◈ Google Cloud Run</span>
+          </div>
+          <p style={{ color: "rgba(255,255,255,0.22)", fontSize: "0.7rem" }}>
+            {planCount !== null ? `${planCount.toLocaleString()} plans generated · ` : ""}
+            Rapid Agent Hackathon 2026 · MongoDB Track
+          </p>
         </div>
-
-        {/* Live counter */}
-        <p className="animate-fade-up mt-3" style={{ color: "rgba(255,255,255,0.2)", fontSize: "0.7rem", animationDelay: "0.9s" }}>
-          {planCount !== null ? `${planCount} business plans generated · ` : ""}
-          Rapid Agent Hackathon 2026 · MongoDB Partner Track
-        </p>
       </div>
     </section>
   )
