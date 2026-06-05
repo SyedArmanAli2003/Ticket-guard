@@ -39,6 +39,40 @@ html { scroll-behavior: smooth; }
 .step-content { max-height: 0; overflow: hidden; transition: max-height 0.5s cubic-bezier(0.16,1,0.3,1); }
 .step-content.open { max-height: 800px; }
 
+/* ── TicketGuard motion ───────────────────────────────────────────────────── */
+/* Live "change-stream" item: brief highlight + slide-in */
+@keyframes feedIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-feed-in { animation: feedIn 0.55s cubic-bezier(0.16,1,0.3,1) both; }
+
+/* Live status dot pulse (used on the feed + "live" caption) */
+@keyframes livePulse {
+  0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.55); }
+  70%  { box-shadow: 0 0 0 7px rgba(16,185,129,0); }
+  100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+.live-dot { animation: livePulse 1.8s ease-out infinite; }
+
+/* Fresh feed item ring that fades after entry */
+@keyframes freshRing {
+  0%   { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.55); }
+  100% { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.07); }
+}
+.fresh-ring { animation: freshRing 2.4s ease-out forwards; }
+
+/* Animated contribution bar fill */
+@keyframes barGrow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.bar-grow { transform-origin: left center; animation: barGrow 0.7s cubic-bezier(0.16,1,0.3,1) both; }
+
+/* Risk-score count emphasis */
+@keyframes riskPop {
+  0%   { opacity: 0; transform: scale(0.9); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.animate-risk-pop { animation: riskPop 0.5s cubic-bezier(0.16,1,0.3,1) both; }
+
 /* ── Premium animated background (aurora + grid + grain) ─────────────────── */
 @keyframes auroraA {
   0%,100% { transform: translate3d(-6%,-3%,0) scale(1);    }
@@ -61,6 +95,11 @@ html { scroll-behavior: smooth; }
   background: radial-gradient(circle at 50% 50%, #4f46e5, transparent 70%); animation: auroraB 26s ease-in-out infinite; }
 .bg-aurora .b3 { width: 38vw; height: 38vw; left: 28vw;  bottom: -16vw;
   background: radial-gradient(circle at 50% 50%, #06b6d4, transparent 70%); opacity: 0.32; animation: auroraC 30s ease-in-out infinite; }
+
+/* Emerald "trust" aurora — used on TicketGuard surfaces alongside the violet */
+.bg-aurora.teal .b1 { background: radial-gradient(circle at 30% 30%, #10b981, transparent 70%); opacity: 0.42; }
+.bg-aurora.teal .b2 { background: radial-gradient(circle at 50% 50%, #6d28d9, transparent 70%); opacity: 0.40; }
+.bg-aurora.teal .b3 { background: radial-gradient(circle at 50% 50%, #0d9488, transparent 70%); opacity: 0.30; }
 
 /* Fine technical grid, faded toward edges */
 .bg-grid { position: fixed; inset: 0; z-index: 0; pointer-events: none;

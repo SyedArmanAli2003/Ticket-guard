@@ -10,11 +10,12 @@ const sora = Sora({
 })
 
 export const metadata: Metadata = {
-  title: "PitchCraft — AI Business Plan Agent",
-  description: "Turn your startup idea into an investor-ready business plan in 60 seconds.",
+  title: "TicketGuard — Spot ticket-resale scams before you pay",
+  description:
+    "Paste a suspicious ticket-resale listing or seller DM. An AI agent runs a multi-step investigation grounded in MongoDB Atlas Vector Search and the MongoDB MCP server, and returns an evidence-backed risk verdict.",
   openGraph: {
-    title: "PitchCraft",
-    description: "7-step AI agent. One idea in. Full plan out.",
+    title: "TicketGuard",
+    description: "An AI agent that flags major-event ticket-resale scams — evidence-backed, in seconds.",
   },
 }
 

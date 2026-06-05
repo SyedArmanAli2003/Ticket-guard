@@ -1,43 +1,31 @@
 import type { Metadata } from "next"
-import type { BusinessPlan } from "@/lib/types"
-import { API } from "@/lib/config"
-import PlanDisplay from "./PlanDisplay"
+import Link from "next/link"
 
-export async function generateMetadata(
-  { params }: { params: { id: string } }
-): Promise<Metadata> {
-  try {
-    const res = await fetch(API.plan(params.id), { cache: "no-store" })
-    const plan: BusinessPlan = await res.json()
-    return {
-      title: `${plan.validation?.one_line_summary || plan.idea} — PitchCraft`,
-      description: `AI-generated business plan: ${plan.idea}`,
-    }
-  } catch {
-    return { title: "Business Plan — PitchCraft" }
-  }
+// TicketGuard runs in self-contained mock mode with no backend, so saved
+// "plan" records are not available here. This route stays valid for the build
+// and gently routes visitors to the live investigation flow. No network calls.
+export const metadata: Metadata = {
+  title: "TicketGuard — demo mode",
+  description: "TicketGuard runs on synthetic demo data with no backend.",
 }
 
-export default async function PlanPage(
-  { params }: { params: { id: string } }
-) {
-  let plan: BusinessPlan | null = null
-  try {
-    const res = await fetch(API.plan(params.id), { cache: "no-store" })
-    if (!res.ok) throw new Error("Not found")
-    plan = await res.json()
-  } catch {
-    return (
-      <div className="min-h-screen flex items-center justify-center"
-        style={{ background: "hsl(240,25%,4%)" }}>
-        <div className="text-center">
-          <p className="text-white text-xl mb-2">Plan not found</p>
-          <a href="/" className="text-sm" style={{ color: "hsl(258,85%,74%)" }}>
-            ← Generate your own
-          </a>
-        </div>
+export default function PlanPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center px-6" style={{ background: "hsl(240,25%,4%)" }}>
+      <div className="text-center max-w-md">
+        <p className="text-white text-xl font-semibold mb-2">Running in demo mode</p>
+        <p className="text-sm mb-6" style={{ color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>
+          TicketGuard is running on self-contained synthetic data with no backend,
+          so saved records aren&rsquo;t available. Try a live investigation instead.
+        </p>
+        <Link
+          href="/investigate"
+          className="inline-block px-6 py-3 rounded-xl font-semibold text-sm text-white"
+          style={{ background: "linear-gradient(180deg, hsl(160,84%,42%), hsl(168,80%,34%))" }}
+        >
+          Check a listing →
+        </Link>
       </div>
-    )
-  }
-  return <PlanDisplay plan={plan!} />
+    </div>
+  )
 }

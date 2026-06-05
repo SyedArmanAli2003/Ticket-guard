@@ -12,3 +12,16 @@ export const API = {
   health:   `${BASE}/health`,
   mcpInfo:  `${BASE}/api/mcp/info`,
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MOCK MODE — TicketGuard demo runs fully client-side with no backend.
+//
+// Enabled when NEXT_PUBLIC_DEMO === "mock" OR when no NEXT_PUBLIC_API_URL is
+// configured. The deployed (Vercel) build sets neither a real API URL, so it
+// defaults to mock. In mock mode the app NEVER calls the real API.
+// ─────────────────────────────────────────────────────────────────────────────
+export function isMockMode(): boolean {
+  if (process.env.NEXT_PUBLIC_DEMO === "mock") return true
+  if (!process.env.NEXT_PUBLIC_API_URL) return true
+  return false
+}

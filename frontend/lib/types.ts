@@ -2,6 +2,82 @@ export type StepStatus = "waiting" | "running" | "complete" | "error"
 
 export type ToolSource = "gemini" | "mongodb" | "vector" | "system"
 
+// ─────────────────────────────────────────────────────────────────────────────
+// TicketGuard — ticket-resale scam investigation (mock-mode types)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type RiskLevel = "HIGH" | "MEDIUM" | "LOW"
+
+/** A single extracted signal from the pasted listing/DM. */
+export interface Entity {
+  /** e.g. "Price", "Seller", "Domain", "Payment", "Urgency" */
+  kind: string
+  value: string
+  /** true when this signal pushes risk up (shown amber/red), false = reassuring */
+  flagged: boolean
+}
+
+/** One matched scam-pattern row from the hybrid (vector + full-text) search. */
+export interface HybridMatch {
+  /** Human label for the pattern, e.g. "Irreversible payment (Zelle)" */
+  label: string
+  patternType: string
+  /** Short synthetic example excerpt from the corpus this matched against. */
+  excerpt: string
+  /** Vector-search contribution to the blended score, 0–1. */
+  vectorScore: number
+  /** Full-text-search contribution to the blended score, 0–1. */
+  textScore: number
+  /** Blended relevance score, 0–1. */
+  score: number
+}
+
+/** A piece of evidence surfaced on the verdict card. */
+export interface EvidenceChip {
+  label: string
+  why: string
+  vectorScore: number
+  textScore: number
+}
+
+/** Result of the deterministic official-transfer rule check. */
+export interface RuleCheck {
+  passed: boolean
+  note: string
+}
+
+/** The full canned investigation returned by the mock engine. */
+export interface Investigation {
+  inputText: string
+  entities: Entity[]
+  matches: HybridMatch[]
+  riskScore: number
+  riskLevel: RiskLevel
+  rule: RuleCheck
+  rationale: string
+  evidence: EvidenceChip[]
+}
+
+/** An item in the "Recently reported" live feed (mock change stream). */
+export interface FeedItem {
+  id: string
+  excerpt: string
+  riskLevel: RiskLevel
+  handle: string
+  /** epoch ms when reported */
+  reportedAt: number
+  /** marks a freshly-streamed-in item so the UI can pulse it */
+  isLive?: boolean
+}
+
+/** Headline evaluation numbers shown on the hero + about strip. */
+export interface EvalMetrics {
+  recall: number
+  corpusSize: number
+  patternsTracked: number
+  medianLatencyMs: number
+}
+
 export interface ToolActivity {
   tool: string
   source: ToolSource
