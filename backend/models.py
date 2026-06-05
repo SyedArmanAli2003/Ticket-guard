@@ -1,17 +1,5 @@
-from typing import Literal
-from pydantic import BaseModel
-
-# Valid model keys the user can choose from the frontend.
-ModelKey = Literal["gemini", "llama", "deepseek", "minimax"]
+from pydantic import BaseModel, Field
 
 
 class IdeaRequest(BaseModel):
-    idea: str
-    model: ModelKey = "gemini"
-
-
-class PlanStep(BaseModel):
-    step: int
-    name: str
-    status: str
-    data: dict | None = None
+    idea: str = Field(min_length=3, max_length=300)

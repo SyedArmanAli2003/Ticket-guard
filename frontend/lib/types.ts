@@ -1,5 +1,13 @@
 export type StepStatus = "waiting" | "running" | "complete" | "error"
 
+export type ToolSource = "gemini" | "mongodb" | "vector" | "system"
+
+export interface ToolActivity {
+  tool: string
+  source: ToolSource
+  preview: string
+}
+
 export interface AgentStep {
   stepNumber: number
   name: string
@@ -7,7 +15,8 @@ export interface AgentStep {
   data?: Record<string, unknown>
   startedAt?: number
   completedAt?: number
-  tool: "gemini" | "llama" | "deepseek" | "minimax" | "mongodb" | "system"
+  tool: ToolSource
+  activity?: ToolActivity[]
 }
 
 export interface BusinessPlan {
@@ -39,6 +48,7 @@ export interface BusinessPlan {
     willingness_to_pay: string
     how_they_find_us: string
   }>
+  engine?: string
   business_plan?: {
     problem: string
     solution: string
@@ -46,6 +56,21 @@ export interface BusinessPlan {
     revenue_model: string
     revenue_streams: string[]
     go_to_market: string
+    key_milestones?: Array<{ month: number; milestone: string }>
+  }
+  action_items?: {
+    next_30_days: string[]
+    next_60_days: string[]
+    next_90_days: string[]
+    investor_one_liner: string
+    recommended_kpis: string[]
+  }
+  qa_review?: {
+    overall_score: number
+    investment_ready: boolean
+    strengths: string[]
+    weaknesses: string[]
+    verdict: string
   }
   financials?: {
     year1_revenue: string

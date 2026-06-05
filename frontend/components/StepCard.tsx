@@ -3,13 +3,14 @@ import { memo } from "react"
 import type { AgentStep } from "@/lib/types"
 
 const SPECIALISTS: Record<number, string> = {
-  1: "Strategy Analyst",
-  2: "Market Research · MongoDB",
+  1: "Idea Validator",
+  2: "Market Analyst · MongoDB",
   3: "Customer Insights",
   4: "Business Architect",
   5: "Financial Modeller",
-  6: "Risk & Compliance",
+  6: "Risk Officer",
   7: "Chief of Staff",
+  8: "QA Critic",
 }
 
 interface StepCardProps {
@@ -19,12 +20,10 @@ interface StepCardProps {
 type ToolKey = AgentStep["tool"]
 
 const TOOL_BADGE: Record<ToolKey, { label: string; bg: string; color: string; border: string }> = {
-  gemini:   { label: "GEMINI",   bg: "rgba(124,58,237,0.12)", color: "hsl(258,80%,78%)",  border: "rgba(124,58,237,0.25)" },
-  llama:    { label: "LLAMA",    bg: "rgba(34,197,94,0.1)",   color: "rgb(74,222,128)",   border: "rgba(34,197,94,0.25)"  },
-  deepseek: { label: "DEEPSEEK", bg: "rgba(14,165,233,0.1)",  color: "rgb(125,211,252)",  border: "rgba(14,165,233,0.25)" },
-  minimax:  { label: "MINIMAX",  bg: "rgba(234,179,8,0.1)",   color: "rgb(250,204,21)",   border: "rgba(234,179,8,0.25)"  },
-  mongodb:  { label: "MONGODB",  bg: "rgba(34,197,94,0.12)",  color: "rgb(74,222,128)",   border: "rgba(34,197,94,0.25)"  },
-  system:   { label: "SYSTEM",   bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "rgba(255,255,255,0.12)" },
+  gemini:  { label: "GEMINI",  bg: "rgba(124,58,237,0.12)", color: "hsl(258,80%,78%)",  border: "rgba(124,58,237,0.25)" },
+  mongodb: { label: "MONGODB", bg: "rgba(34,197,94,0.12)",  color: "rgb(74,222,128)",   border: "rgba(34,197,94,0.25)"  },
+  vector:  { label: "VECTOR",  bg: "rgba(14,165,233,0.1)",  color: "rgb(125,211,252)",  border: "rgba(14,165,233,0.25)" },
+  system:  { label: "SYSTEM",  bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "rgba(255,255,255,0.12)" },
 }
 
 function ToolBadge({ tool }: { tool: ToolKey }) {
@@ -34,6 +33,26 @@ function ToolBadge({ tool }: { tool: ToolKey }) {
       style={{ background: b.bg, color: b.color, border: `1px solid ${b.border}` }}>
       {b.label}
     </span>
+  )
+}
+
+function ActivityFeed({ activity }: { activity: NonNullable<AgentStep["activity"]> }) {
+  return (
+    <div className="mt-3 space-y-1.5">
+      {activity.map((a, i) => {
+        const isMongo = a.source === "mongodb"
+        const icon = isMongo ? "🍃" : a.source === "vector" ? "🔎" : "⚙"
+        const color = isMongo ? "rgb(74,222,128)" : "rgb(125,211,252)"
+        return (
+          <div key={i} className="flex items-center gap-2 text-xs"
+            style={{ color: "rgba(255,255,255,0.55)" }}>
+            <span>{icon}</span>
+            <span style={{ color }}>{a.source === "vector" ? "Atlas Vector Search" : "MongoDB MCP"}</span>
+            <code style={{ color: "rgba(255,255,255,0.45)" }}>{a.tool}{a.preview ? `("${a.preview}")` : "()"}</code>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -105,6 +124,10 @@ function StepCard({ step }: StepCardProps) {
           {status === "error" && <span className="text-xs text-red-400">Failed</span>}
         </div>
       </div>
+
+      {step.activity && step.activity.length > 0 && status !== "waiting" && (
+        <ActivityFeed activity={step.activity} />
+      )}
 
       {/* Expandable content */}
       <div className={`step-content ${status === "complete" && data ? "open" : ""}`}>
@@ -200,13 +223,45 @@ function StepData({ stepNumber, data }: { stepNumber: number; data: Record<strin
     </div>
   )
 
-  if (stepNumber === 7) return (
-    <div className="text-center py-2">
-      <p className="text-2xl mb-2">🎉</p>
-      <p className="text-sm font-medium text-white">Business plan complete!</p>
-      <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.45)" }}>Saved to MongoDB · Share link ready</p>
-    </div>
-  )
+  if (stepNumber === 7) {
+    const oneLiner = val("investor_one_liner")
+    const d30 = (data.next_30_days as string[] | undefined) || []
+    return (
+      <div className="space-y-2">
+        {oneLiner && (
+          <p className="text-sm italic pl-3" style={{ borderLeft: "2px solid hsl(258,85%,64%)", color: "rgba(255,255,255,0.75)" }}>
+            “{oneLiner}”
+          </p>
+        )}
+        {d30.slice(0, 3).map((t, i) => (
+          <div key={i} className="flex items-start gap-2 text-xs">
+            <span style={{ color: "hsl(258,80%,72%)" }}>▸</span>
+            <span style={{ color: "rgba(255,255,255,0.7)" }}>{t}</span>
+          </div>
+        ))}
+        <p className="text-xs pt-1" style={{ color: "rgba(74,222,128,0.8)" }}>✓ Saved to MongoDB · share link ready</p>
+      </div>
+    )
+  }
+
+  if (stepNumber === 8) {
+    const score = data.overall_score as number | undefined
+    const ready = data.investment_ready as boolean | undefined
+    return (
+      <div className="space-y-2">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl font-bold" style={{ color: (score ?? 0) >= 7 ? "rgb(74,222,128)" : "rgb(250,204,21)" }}>
+            {score}/10
+          </span>
+          <span className="text-xs px-2 py-0.5 rounded-full"
+            style={{ background: ready ? "rgba(34,197,94,0.15)" : "rgba(234,179,8,0.15)", color: ready ? "rgb(74,222,128)" : "rgb(250,204,21)" }}>
+            {ready ? "Investment-ready" : "Needs work"}
+          </span>
+        </div>
+        {val("verdict") && <p className="text-xs italic" style={{ color: "rgba(255,255,255,0.7)" }}>{val("verdict")}</p>}
+      </div>
+    )
+  }
 
   return null
 }

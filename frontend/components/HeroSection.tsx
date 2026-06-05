@@ -47,7 +47,7 @@ export default function HeroSection() {
           }}
         >
           <span className="animate-spin-slow inline-block leading-none">✦</span>
-          7-step AI agent · MongoDB · Gemini Flash
+          Gemini · Agent Builder · MongoDB MCP
         </div>
 
         {/* Heading */}
@@ -85,9 +85,10 @@ export default function HeroSection() {
             animationDelay: "0.5s",
           }}
         >
-          A 7-step AI agent powered by Gemini and MongoDB. Validates your idea,
-          researches the market, builds personas, writes the full plan,
-          projects financials, and analyzes risk — all under 60 seconds.
+          A Gemini agent (Google Cloud Agent Builder / ADK) that researches your
+          market live through the MongoDB MCP server and Atlas Vector Search —
+          validating the idea, building personas, projecting financials, analyzing
+          risk, and handing you a 30/60/90-day action plan.
         </p>
 
         {/* CTA buttons */}
@@ -138,7 +139,7 @@ export default function HeroSection() {
         {/* Tech pills */}
         <div className="animate-fade-up flex items-center flex-wrap gap-2 mt-7" style={{ animationDelay: "0.78s" }}>
           <span style={{ color: "rgba(255,255,255,0.2)", fontSize: "0.72rem" }}>Powered by</span>
-          {["🍃 MongoDB","✦ Gemini Flash","⚡ FastAPI","◈ Google Cloud"].map(l => (
+          {["🍃 MongoDB Atlas","✦ Gemini 2.5","⚙ Agent Builder (ADK)","◈ Google Cloud Run"].map(l => (
             <span key={l} style={{
               background: "rgba(255,255,255,0.04)",
               border: "1px solid rgba(255,255,255,0.09)",
