@@ -253,11 +253,11 @@ h1, h2, h3, .font-display { font-family: var(--font-display), ui-sans-serif, sys
 
 /* ── Motion ─────────────────────────────────────────────────────────────── */
 @keyframes fadeUp {
-  from { opacity:0; transform:translateY(24px); filter:blur(6px); }
-  to   { opacity:1; transform:translateY(0);    filter:blur(0); }
+  from { opacity:0; transform:translateY(20px); }
+  to   { opacity:1; transform:translateY(0); }
 }
 @keyframes spinSlow { to { transform: rotate(360deg); } }
-.animate-fade-up { opacity: 0; animation: fadeUp 0.8s cubic-bezier(0.16,1,0.3,1) forwards; }
+.animate-fade-up { opacity: 0; animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) forwards; }
 .animate-spin-slow { animation: spinSlow 5s linear infinite; }
 
 .step-content { max-height: 0; overflow: hidden; transition: max-height 0.5s cubic-bezier(0.16,1,0.3,1); }
@@ -351,15 +351,15 @@ h1, h2, h3, .font-display { font-family: var(--font-display), ui-sans-serif, sys
 }
 
 .bg-aurora { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; opacity: var(--tg-aurora-opacity); }
-.bg-aurora .blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.5; will-change: transform; }
-.bg-aurora .b1 { width: 46vw; height: 46vw; left: -8vw;  top: -10vw;
-  background: radial-gradient(circle at 30% 30%, #7c3aed, transparent 70%); animation: auroraA 22s ease-in-out infinite; }
-.bg-aurora .b2 { width: 42vw; height: 42vw; right: -6vw; top: 6vh;
-  background: radial-gradient(circle at 50% 50%, #4f46e5, transparent 70%); animation: auroraB 26s ease-in-out infinite; }
-.bg-aurora .b3 { width: 38vw; height: 38vw; left: 28vw;  bottom: -16vw;
-  background: radial-gradient(circle at 50% 50%, #06b6d4, transparent 70%); opacity: 0.32; animation: auroraC 30s ease-in-out infinite; }
-.bg-aurora .b4 { width: 30vw; height: 30vw; right: 12vw; bottom: 2vh;
-  background: radial-gradient(circle at 50% 50%, #2dd4bf, transparent 70%); opacity: 0.22; animation: auroraD 34s ease-in-out infinite; }
+.bg-aurora .blob { position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.38; will-change: transform; contain: strict; }
+.bg-aurora .b1 { width: 50vw; height: 50vw; left: -10vw;  top: -12vw;
+  background: radial-gradient(circle at 30% 30%, #7c3aed, transparent 70%); animation: auroraA 38s ease-in-out infinite; }
+.bg-aurora .b2 { width: 46vw; height: 46vw; right: -8vw; top: 4vh;
+  background: radial-gradient(circle at 50% 50%, #4f46e5, transparent 70%); animation: auroraB 46s ease-in-out infinite; }
+.bg-aurora .b3 { width: 40vw; height: 40vw; left: 26vw;  bottom: -18vw;
+  background: radial-gradient(circle at 50% 50%, #06b6d4, transparent 70%); opacity: 0.24; animation: auroraC 52s ease-in-out infinite; }
+.bg-aurora .b4 { width: 32vw; height: 32vw; right: 10vw; bottom: 0vh;
+  background: radial-gradient(circle at 50% 50%, #2dd4bf, transparent 70%); opacity: 0.16; animation: auroraD 58s ease-in-out infinite; }
 
 /* Emerald "trust" aurora — used on TicketGuard surfaces alongside the violet */
 .bg-aurora.teal .b1 { background: radial-gradient(circle at 30% 30%, #10b981, transparent 70%); opacity: 0.42; }

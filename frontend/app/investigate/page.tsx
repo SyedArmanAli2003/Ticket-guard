@@ -8,6 +8,9 @@ import InvestigationStep from "@/components/InvestigationStep"
 import RiskCard from "@/components/RiskCard"
 import LiveFeed from "@/components/LiveFeed"
 import HealthStrip from "@/components/HealthStrip"
+import Footer from "@/components/Footer"
+import { useAuth } from "@/components/AuthProvider"
+import { addHistoryEntry } from "@/lib/history"
 import type {
   AgentStep,
   ToolSource,
@@ -65,6 +68,7 @@ function InvestigateContent() {
   const mode = getMode()
   const isReal = mode === "real"
   const isMock = mode === "mock"
+  const { user } = useAuth()
 
   // ── shared UI state ──
   const [ingest, setIngest] = useState<IngestKind>("text")
@@ -150,6 +154,15 @@ function InvestigateContent() {
     }
     if (runId.current !== id) return
     setResult(inv); setIsRunning(false)
+    // Save to history
+    addHistoryEntry({
+      userId: user?.id ?? null,
+      query: input,
+      queryType: "text",
+      verdict: inv.riskLevel,
+      score: inv.riskScore,
+      rationale: inv.rationale,
+    })
   }, [])
 
   // ── REAL runner: consume the SSE stream, map frames → steps + verdict ──
@@ -187,6 +200,17 @@ function InvestigateContent() {
         }
         setResult(buildInvestigation(realAcc.current, recapText))
         setIsRunning(false)
+        // Save to history after real investigation completes
+        const builtInv = buildInvestigation(realAcc.current, recapText)
+        addHistoryEntry({
+          userId: user?.id ?? null,
+          query: recapText,
+          queryType: body && (body as {type:string}).type === "url" ? "url" : body && (body as {type:string}).type === "image" || (body as {type:string}).type === "pdf" ? "file" : "text",
+          verdict: builtInv.riskLevel,
+          score: builtInv.riskScore,
+          rationale: builtInv.rationale,
+          investigationId: realAcc.current.investigationId,
+        })
         return
       }
       // per-step
@@ -588,6 +612,7 @@ function InvestigateContent() {
           </aside>
         </div>
       </div>
+      <Footer />
     </div>
   )
 }

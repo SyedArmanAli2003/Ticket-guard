@@ -2,7 +2,7 @@
 import { useRouter, usePathname } from "next/navigation"
 import { memo, useEffect, useState } from "react"
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion"
-import { Menu, X, ArrowRight, User, LogOut, LayoutDashboard } from "lucide-react"
+import { Menu, X, ArrowRight, User, LogOut, LayoutDashboard, History } from "lucide-react"
 import { usePrefersReducedMotion, EASE_OUT } from "@/lib/motion"
 import { getMode } from "@/lib/config"
 import ThemeToggle from "@/components/ThemeToggle"
@@ -165,12 +165,12 @@ function Navbar() {
                           <LayoutDashboard size={14} /> Admin Dashboard
                         </button>
                       )}
-                      <button onClick={() => { setUserMenuOpen(false); go("/investigate") }}
+                      <button onClick={() => { setUserMenuOpen(false); go("/history") }}
                         className="w-full text-left px-4 py-3 text-sm flex items-center gap-2 transition-colors cursor-pointer"
                         style={{ color: "var(--tg-text-2)" }}
                         onMouseEnter={e => (e.currentTarget.style.background = "var(--tg-hover)")}
                         onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
-                        <User size={14} /> My Investigations
+                        <History size={14} /> My History
                       </button>
                       <div style={{ borderTop: "1px solid var(--tg-border)" }} />
                       <button onClick={() => { setUserMenuOpen(false); logout() }}
