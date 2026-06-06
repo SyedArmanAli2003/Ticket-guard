@@ -1,4 +1,4 @@
-# PitchCraft agent — needs Node (MongoDB MCP server via npx) + Python (ADK/FastAPI)
+# TicketGuard agent — needs Node (MongoDB MCP server via npx) + Python (ADK/FastAPI)
 FROM node:20-bookworm-slim
 
 # Python runtime
@@ -20,6 +20,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Cloud Run injects PORT (8080). Long timeout: agent runs ~7 Gemini calls.
+# Cloud Run injects PORT (8080). Long timeout: an investigation runs ~3 Gemini
+# calls (normalizer + optional vision tamper-hints + verdict) plus Atlas queries.
 ENV PORT=8080
 CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT} --timeout-keep-alive 120"]

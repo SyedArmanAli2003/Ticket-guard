@@ -1,10 +1,20 @@
-# PitchCraft agent backend — Google ADK + Gemini (Vertex-ready) + MongoDB MCP
+# TicketGuard agent backend — Google ADK + Gemini (Vertex-ready) + MongoDB MCP
 google-adk==2.2.0
 google-genai==2.8.0
 mcp==1.27.2
 fastapi==0.136.3
 uvicorn==0.49.0
-pymongo==4.8.0
+# pymongo >=4.9 ships the native AsyncMongoClient used by the /api/feed change stream.
+pymongo==4.10.1
 certifi==2026.5.20
 pydantic==2.13.4
 python-dotenv==1.0.0
+
+# Multi-source ingestion (text / PDF / image / URL).
+pypdf==5.1.0
+beautifulsoup4==4.12.3
+httpx==0.28.1
+pillow==11.0.0
+# Optional native barcode/QR decode; ingest.py degrades gracefully if absent
+# (falls back to Gemini reading visible digits). Pinned to a version with wheels.
+zxing-cpp==3.0.0
