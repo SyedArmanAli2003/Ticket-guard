@@ -1,9 +1,10 @@
 "use client"
 import { memo } from "react"
 import { motion } from "framer-motion"
-import { Leaf, Search, Sparkles, Settings2, Loader2, Check } from "lucide-react"
+import { Leaf, Search, Sparkles, Settings2, Loader2, Check, MinusCircle } from "lucide-react"
 import type { AgentStep, Entity, HybridMatch, RuleCheck } from "@/lib/types"
 import ContributionBars from "@/components/ContributionBars"
+import RealStepData from "@/components/RealStepData"
 import {
   usePrefersReducedMotion,
   staggerContainer,
@@ -62,12 +63,14 @@ function StepRing({
     status === "complete" ? "rgb(74,222,128)" :
     status === "running"  ? "hsl(160,84%,55%)" :
     status === "error"    ? "rgb(248,113,113)" :
+    status === "not_configured" ? "rgba(255,255,255,0.28)" :
                             "rgba(255,255,255,0.25)"
   const fill = {
     waiting:  { background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.4)" },
     running:  { background: "rgba(16,185,129,0.18)",  color: "hsl(160,84%,72%)" },
     complete: { background: "rgba(34,197,94,0.14)",   color: "rgb(74,222,128)" },
     error:    { background: "rgba(239,68,68,0.15)",   color: "rgb(252,165,165)" },
+    not_configured: { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" },
   }[status]
 
   return (
@@ -95,7 +98,13 @@ function StepRing({
         className="absolute inset-[3px] rounded-full flex items-center justify-center text-xs font-bold"
         style={fill}
       >
-        {status === "complete" ? <Check size={14} strokeWidth={3} /> : stepNumber}
+        {status === "complete" ? (
+          <Check size={14} strokeWidth={3} />
+        ) : status === "not_configured" ? (
+          <MinusCircle size={13} strokeWidth={2.4} />
+        ) : (
+          stepNumber
+        )}
       </div>
     </div>
   )
@@ -147,12 +156,15 @@ function InvestigationStep({ step, total }: { step: AgentStep; total: number }) 
   const reduced = usePrefersReducedMotion()
   const { stepNumber, name, status, data, startedAt, completedAt } = step
   const duration = startedAt && completedAt ? ((completedAt - startedAt) / 1000).toFixed(1) + "s" : null
+  const workerLabel = step.worker ?? WORKER[stepNumber] ?? "Working"
+  const isReal = step.kind === "real"
 
   const borderColor = {
     waiting:  "rgba(255,255,255,0.06)",
     running:  "rgba(16,185,129,0.5)",
     complete: "rgba(34,197,94,0.4)",
     error:    "rgba(239,68,68,0.4)",
+    not_configured: "rgba(255,255,255,0.1)",
   }[status]
 
   return (
@@ -180,12 +192,22 @@ function InvestigationStep({ step, total }: { step: AgentStep; total: number }) 
             {status === "running" && (
               <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "hsl(160,72%,68%)" }}>
                 <Loader2 size={11} className={reduced ? "" : "animate-spin"} strokeWidth={2.4} />
-                {WORKER[stepNumber]} is working…
+                {workerLabel} is working…
               </p>
             )}
             {status === "complete" && duration && (
               <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "rgba(74,222,128,0.85)" }}>
-                <Check size={11} strokeWidth={3} /> {WORKER[stepNumber]} · done in {duration}
+                <Check size={11} strokeWidth={3} /> {workerLabel} · done in {duration}
+              </p>
+            )}
+            {status === "not_configured" && (
+              <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "rgba(255,255,255,0.45)" }}>
+                <MinusCircle size={11} strokeWidth={2.2} /> {workerLabel} · not configured
+              </p>
+            )}
+            {status === "error" && (
+              <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "rgb(252,165,165)" }}>
+                {workerLabel} · failed
               </p>
             )}
           </div>
@@ -198,6 +220,14 @@ function InvestigationStep({ step, total }: { step: AgentStep; total: number }) 
               style={{ borderColor: "hsl(160,84%,46%)", borderTopColor: "transparent" }} />
           )}
           {status === "complete" && <span className="text-xs" style={{ color: "rgb(74,222,128)" }}>Done</span>}
+          {status === "not_configured" && (
+            <span
+              className="text-xs px-2 py-0.5 rounded-full"
+              style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.12)" }}
+            >
+              not configured
+            </span>
+          )}
           {status === "error" && <span className="text-xs text-red-400">Failed</span>}
         </div>
       </div>
@@ -208,10 +238,25 @@ function InvestigationStep({ step, total }: { step: AgentStep; total: number }) 
         </div>
       )}
 
-      <div className={`step-content ${status === "complete" && data ? "open" : ""}`}>
-        {status === "complete" && data && (
+      {/* honest reason line for a not_configured / error step (real mode) */}
+      {(status === "not_configured" || status === "error") && (step.reason || isReal) && (
+        <p className="relative text-xs mt-3" style={{ color: "rgba(255,255,255,0.42)", lineHeight: 1.5 }}>
+          {step.reason
+            ? step.reason
+            : status === "not_configured"
+            ? "This signal needs a configured data source (e.g. MongoDB Atlas). It was skipped honestly rather than guessed."
+            : "This step did not complete."}
+        </p>
+      )}
+
+      <div className={`step-content ${(status === "complete" || status === "not_configured") && data ? "open" : ""}`}>
+        {(status === "complete" || status === "not_configured") && data && (
           <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-            <StepData stepNumber={stepNumber} data={data} reduced={reduced} />
+            {isReal ? (
+              <RealStepData stepNumber={stepNumber} status={status} data={data} reduced={reduced} />
+            ) : (
+              <StepData stepNumber={stepNumber} data={data} reduced={reduced} />
+            )}
           </div>
         )}
       </div>

@@ -15,6 +15,9 @@ export default function ContributionBars({
   compact?: boolean
 }) {
   const reduced = usePrefersReducedMotion()
+  // A negative value is the "no data" sentinel (real mode: retrieval offline /
+  // no contribution for this chip). Render nothing rather than a fake 0% bar.
+  if (vector < 0 || text < 0) return null
   const rows = [
     { label: "vector", val: vector, color: "rgb(125,211,252)", bg: "rgba(14,165,233,0.16)" },
     { label: "text", val: text, color: "rgb(74,222,128)", bg: "rgba(34,197,94,0.16)" },

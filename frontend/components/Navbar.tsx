@@ -4,6 +4,7 @@ import { memo, useEffect, useState } from "react"
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion"
 import { Menu, X, ArrowRight } from "lucide-react"
 import { usePrefersReducedMotion, EASE_OUT } from "@/lib/motion"
+import { getMode } from "@/lib/config"
 
 const NAV_LINKS = [
   { label: "How It Works", href: "/#how" },
@@ -36,6 +37,7 @@ function Navbar() {
   const reduced = usePrefersReducedMotion()
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const demoMode = getMode() === "mock"
 
   // Top scroll-progress bar (premium chrome; static under reduced motion).
   const { scrollYProgress } = useScroll()
@@ -74,13 +76,24 @@ function Navbar() {
       >
         <div className="flex justify-between items-center px-6 lg:px-16 py-5">
           {/* Logo */}
-          <span
-            className="text-xl font-semibold tracking-tight select-none cursor-pointer flex items-center font-display"
-            onClick={() => go("/")}
-          >
-            <ShieldGlyph />
-            <span style={{ color: "rgba(255,255,255,0.92)" }}>Ticket</span>
-            <span style={{ color: "hsl(160,84%,52%)" }}>Guard</span>
+          <span className="flex items-center gap-2">
+            <span
+              className="text-xl font-semibold tracking-tight select-none cursor-pointer flex items-center font-display"
+              onClick={() => go("/")}
+            >
+              <ShieldGlyph />
+              <span style={{ color: "rgba(255,255,255,0.92)" }}>Ticket</span>
+              <span style={{ color: "hsl(160,84%,52%)" }}>Guard</span>
+            </span>
+            {demoMode && (
+              <span
+                className="text-xs px-2 py-0.5 rounded-full font-medium select-none"
+                style={{ background: "rgba(234,179,8,0.12)", color: "rgb(250,204,21)", border: "1px solid rgba(234,179,8,0.3)" }}
+                title="No live backend — synthetic demo data"
+              >
+                DEMO
+              </span>
+            )}
           </span>
 
           {/* Desktop nav links */}

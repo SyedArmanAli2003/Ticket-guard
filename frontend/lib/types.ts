@@ -1,4 +1,4 @@
-export type StepStatus = "waiting" | "running" | "complete" | "error"
+export type StepStatus = "waiting" | "running" | "complete" | "error" | "not_configured"
 
 export type ToolSource = "gemini" | "mongodb" | "vector" | "system"
 
@@ -93,7 +93,133 @@ export interface AgentStep {
   completedAt?: number
   tool: ToolSource
   activity?: ToolActivity[]
+  /** "mock" → render the canned 5-step bodies; "real" → render backend step
+   *  bodies (8 steps, honest not_configured handling). Defaults to "mock". */
+  kind?: "mock" | "real"
+  /** Short worker/specialist label shown under the step title (real mode). */
+  worker?: string
+  /** Reason text for a not_configured / error step (honest, not faked). */
+  reason?: string
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REAL backend contract (TicketGuard FastAPI). These mirror the exact shapes
+// emitted by backend/main.py + pipeline.py + db.py. The mapping layer
+// (lib/realmap.ts) translates these into the mock-shaped UI types above so the
+// premium components render unchanged.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type Verdict = "SCAM" | "SUSPICIOUS" | "LIKELY-LEGIT"
+
+/** GET /api/health */
+export interface HealthResponse {
+  status: string
+  service?: string
+  model?: string
+  gemini_backend?: string
+  gemini: boolean
+  atlas: boolean
+  mcp: boolean
+  gmail: boolean
+  cluster_version: string | null
+  rankfusion_capable: boolean
+  vector_index: boolean
+  text_index: boolean
+  atlas_error: string | null
+}
+
+/** A single per-step SSE frame from POST /api/investigate. */
+export interface StepFrame {
+  step: number
+  name: string
+  status: "running" | "complete" | "not_configured" | "error"
+  data?: Record<string, unknown>
+  error?: string
+}
+
+/** A tool-activity SSE frame. */
+export interface ToolFrame {
+  type: "tool"
+  step: number
+  tool: string
+  source: string
+}
+
+/** The terminal (step 99) finalize frame. */
+export interface FinalizeFrame {
+  step: 99
+  name: string
+  status: "complete" | "error"
+  data?: {
+    verdict?: Verdict
+    confidence?: number
+    investigation_id?: string
+    risk_score?: number | null
+    engine?: string
+  }
+  error?: string
+}
+
+export type InvestigateFrame = StepFrame | ToolFrame | FinalizeFrame
+
+/** Normalized listing object (step 1 data.listing). */
+export interface RealListing {
+  price: number | null
+  face_value: number | null
+  currency: string | null
+  quantity: number | null
+  payment_method: string | null
+  transfer_method: string | null
+  seller_handle: string | null
+  domain: string
+  event: string | null
+  urgency_cues: string[]
+  barcode_or_ref: string | null
+}
+
+/** One fused hybrid-retrieval hit (step 2 data.results[]). */
+export interface RealRetrievalHit {
+  text?: string
+  label?: string
+  risk?: string
+  pattern_type?: string
+  source_pattern?: string
+  vector_score?: number | null
+  text_score?: number | null
+  fused_score?: number
+  contribution?: string
+}
+
+/** The Gemini verdict bundle (step 7 data). */
+export interface RealVerdict {
+  verdict: Verdict
+  confidence: number
+  evidence: string[]
+  reasoning: string
+}
+
+/** A scam report document echoed by GET /api/feed. */
+export interface RealReport {
+  text: string
+  domain?: string
+  handle?: string
+  pattern_type?: string
+  payment_method?: string
+  barcode_or_ref?: string
+  reporter?: string
+  created_at?: string
+}
+
+/** The request body for POST /api/investigate. */
+export type InvestigateRequestBody =
+  | { type: "text"; text: string }
+  | { type: "url"; url: string }
+  | {
+      type: "pdf" | "image"
+      file_b64: string
+      filename: string
+      content_type: string
+    }
 
 export interface BusinessPlan {
   _id: string
