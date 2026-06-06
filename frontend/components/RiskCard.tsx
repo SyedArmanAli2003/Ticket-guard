@@ -95,7 +95,7 @@ function VerifiedResaleModal({ open, onClose }: { open: boolean; onClose: () => 
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
+          style={{ background: "rgba(0,0,0,0.85)" }}
           onClick={e => { if (e.target === e.currentTarget) onClose() }}>
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -148,7 +148,7 @@ function ProceedModal({ open, onClose, riskLevel }: { open: boolean; onClose: ()
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
+          style={{ background: "rgba(0,0,0,0.85)" }}
           onClick={e => { if (e.target === e.currentTarget) onClose() }}>
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 16 }} animate={{ opacity: 1, scale: 1, y: 0 }}

@@ -1,12 +1,15 @@
 "use client"
 import { useState, useEffect, createContext, useContext, useCallback } from "react"
-import { getAuth, login, logout, register, type AuthUser, type LoginResult, type RegisterResult } from "@/lib/auth"
+import {
+  getAuth, loginAsync, registerAsync, logout,
+  type AuthUser, type LoginResult, type RegisterResult
+} from "@/lib/auth"
 
 interface AuthContextValue {
   user: AuthUser | null
   loading: boolean
-  login: (email: string, password: string) => LoginResult
-  register: (name: string, email: string, password: string) => RegisterResult
+  login: (email: string, password: string) => Promise<LoginResult>
+  register: (name: string, email: string, password: string) => Promise<RegisterResult>
   logout: () => void
   refresh: () => void
 }
@@ -27,14 +30,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(false)
   }, [refresh])
 
-  const handleLogin = useCallback((email: string, password: string): LoginResult => {
-    const result = login(email, password)
+  const handleLogin = useCallback(async (email: string, password: string): Promise<LoginResult> => {
+    const result = await loginAsync(email, password)
     if (result.ok && result.user) setUser(result.user)
     return result
   }, [])
 
-  const handleRegister = useCallback((name: string, email: string, password: string): RegisterResult => {
-    const result = register(name, email, password)
+  const handleRegister = useCallback(async (name: string, email: string, password: string): Promise<RegisterResult> => {
+    const result = await registerAsync(name, email, password)
     if (result.ok && result.user) setUser(result.user)
     return result
   }, [])

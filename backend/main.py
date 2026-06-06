@@ -47,6 +47,15 @@ _SSE_HEADERS = {
 async def lifespan(app: FastAPI):
     db.init_db()
     pipeline.init_runner()
+    # Seed demo accounts into MongoDB (idempotent — skips if email already exists)
+    _DEMO_ACCOUNTS = [
+        {"name": "TG Admin", "email": "admin@ticketguard.ai", "password": "admin123", "role": "admin"},
+        {"name": "Demo User", "email": "demo@ticketguard.ai", "password": "demo123", "role": "user"},
+    ]
+    for acc in _DEMO_ACCOUNTS:
+        result = db.register_user(acc["name"], acc["email"], acc["password"], acc["role"])
+        if result["status"] == "ok":
+            print(f"✅ Seeded demo account: {acc['email']}")
     yield
 
 
@@ -246,6 +255,91 @@ async def mcp_info():
 
 
 # --------------------------------------------------------------------------- #
+# POST /api/auth/register — create a new user account in MongoDB
+# --------------------------------------------------------------------------- #
+@app.post("/api/auth/register")
+async def auth_register(body: dict):
+    name = (body.get("name") or "").strip()
+    email = (body.get("email") or "").strip()
+    password = body.get("password") or ""
+    if not name or not email or not password:
+        return {"status": "error", "error": "name, email, and password are required."}
+    result = await asyncio.to_thread(db.register_user, name, email, password)
+    if result["status"] == "not_configured":
+        # DB unavailable: fall back to local-only mode gracefully
+        return {"status": "not_configured", "reason": "db_unavailable",
+                "fallback": "local_only"}
+    return result
+
+
+# --------------------------------------------------------------------------- #
+# POST /api/auth/login — verify credentials against MongoDB
+# --------------------------------------------------------------------------- #
+@app.post("/api/auth/login")
+async def auth_login(body: dict):
+    email = (body.get("email") or "").strip()
+    password = body.get("password") or ""
+    if not email or not password:
+        return {"status": "error", "error": "email and password are required."}
+    result = await asyncio.to_thread(db.login_user, email, password)
+    if result["status"] == "not_configured":
+        return {"status": "not_configured", "reason": "db_unavailable",
+                "fallback": "local_only"}
+    return result
+
+
+# --------------------------------------------------------------------------- #
+# GET /api/history/{user_id} — fetch user's investigation history from MongoDB
+# --------------------------------------------------------------------------- #
+@app.get("/api/history/{user_id}")
+async def get_history(user_id: str, limit: int = 50):
+    entries = await asyncio.to_thread(db.get_user_history, user_id, min(limit, 100))
+    return {"status": "ok", "user_id": user_id, "entries": entries, "count": len(entries)}
+
+
+# --------------------------------------------------------------------------- #
+# POST /api/history/save — save a history entry (called after investigation)
+# --------------------------------------------------------------------------- #
+@app.post("/api/history/save")
+async def save_history(body: dict):
+    required = {"user_id", "query", "verdict", "score", "rationale", "query_type"}
+    missing = required - body.keys()
+    if missing:
+        raise HTTPException(status_code=422, detail=f"Missing fields: {missing}")
+    entry_id = await asyncio.to_thread(db.save_user_history, body)
+    if entry_id == "no-db":
+        return {"status": "not_configured", "reason": "db_unavailable"}
+    return {"status": "ok", "entry_id": entry_id}
+
+
+# --------------------------------------------------------------------------- #
+# DELETE /api/history/entry/{entry_id}?user_id=...
+# --------------------------------------------------------------------------- #
+@app.delete("/api/history/entry/{entry_id}")
+async def delete_history(entry_id: str, user_id: str):
+    deleted = await asyncio.to_thread(db.delete_history_entry, entry_id, user_id)
+    return {"status": "ok" if deleted else "not_found", "deleted": deleted}
+
+
+# --------------------------------------------------------------------------- #
+# DELETE /api/history/{user_id}/clear — wipe all history for a user
+# --------------------------------------------------------------------------- #
+@app.delete("/api/history/{user_id}/clear")
+async def clear_history(user_id: str):
+    count = await asyncio.to_thread(db.clear_user_history, user_id)
+    return {"status": "ok", "deleted": count}
+
+
+# --------------------------------------------------------------------------- #
+# GET /api/admin/users — list all users (admin only, no auth middleware yet)
+# --------------------------------------------------------------------------- #
+@app.get("/api/admin/users")
+async def admin_users():
+    users = await asyncio.to_thread(db.get_all_users)
+    return {"status": "ok", "users": users, "count": len(users)}
+
+
+# --------------------------------------------------------------------------- #
 # GET /health — minimal liveness probe (Cloud Run / load balancers)
 # --------------------------------------------------------------------------- #
 @app.get("/health")
@@ -264,3 +358,4 @@ async def health():
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", "8000")))
+

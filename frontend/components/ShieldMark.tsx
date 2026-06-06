@@ -20,8 +20,7 @@ export default function ShieldMark() {
           position: "absolute",
           inset: "-34%",
           background:
-            "radial-gradient(circle at 50% 45%, rgba(16,185,129,0.40), transparent 62%)",
-          filter: "blur(12px)",
+            "radial-gradient(circle at 50% 45%, rgba(16,185,129,0.20), transparent 62%)",
         }}
       />
 

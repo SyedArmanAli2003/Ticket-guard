@@ -351,7 +351,7 @@ h1, h2, h3, .font-display { font-family: var(--font-display), ui-sans-serif, sys
 }
 
 .bg-aurora { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; opacity: var(--tg-aurora-opacity); }
-.bg-aurora .blob { position: absolute; border-radius: 50%; filter: blur(100px); opacity: 0.38; will-change: transform; contain: strict; }
+.bg-aurora .blob { position: absolute; border-radius: 50%; opacity: 0.20; will-change: transform; contain: strict; }
 .bg-aurora .b1 { width: 50vw; height: 50vw; left: -10vw;  top: -12vw;
   background: radial-gradient(circle at 30% 30%, #7c3aed, transparent 70%); animation: auroraA 38s ease-in-out infinite; }
 .bg-aurora .b2 { width: 46vw; height: 46vw; right: -8vw; top: 4vh;
@@ -369,7 +369,7 @@ h1, h2, h3, .font-display { font-family: var(--font-display), ui-sans-serif, sys
 
 /* Light theme: keep the mesh colourful but dial blobs so they read as soft tints
    on the off-white canvas rather than muddy washes. */
-.light .bg-aurora .blob { filter: blur(90px); opacity: 0.4; }
+.light .bg-aurora .blob { opacity: 0.35; }
 .light .bg-aurora .b1 { background: radial-gradient(circle at 30% 30%, #a78bfa, transparent 70%); }
 .light .bg-aurora .b2 { background: radial-gradient(circle at 50% 50%, #818cf8, transparent 70%); }
 .light .bg-aurora .b3 { background: radial-gradient(circle at 50% 50%, #67e8f9, transparent 70%); opacity: 0.28; }

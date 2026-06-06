@@ -31,6 +31,9 @@ class InvestigateRequest(BaseModel):
     # Optional per-request AI model selector. Validated against the (Gemini-only)
     # models_registry so a bad id → 422; defaults to the primary model.
     model: Optional[str] = Field(default="gemini-2.5-flash")
+    # Optional user identity — stored alongside investigations for history.
+    user_id: Optional[str] = Field(default=None, max_length=200)
+    session_id: Optional[str] = Field(default=None, max_length=200)
 
     @field_validator("model")
     @classmethod

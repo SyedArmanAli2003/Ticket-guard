@@ -30,7 +30,7 @@ import {
   seedFeed,
   feedItemFromInvestigation,
 } from "@/lib/mock"
-import { getMode } from "@/lib/config"
+import { getMode, API, isRealMode } from "@/lib/config"
 import { getHealth, investigateStream, postReport, openFeed, fileToDataUri } from "@/lib/api"
 import {
   freshRealSteps,
@@ -133,6 +133,18 @@ function InvestigateContent() {
     return () => { alive = false; ctrl.abort(); close() }
   }, [isMock, isReal])
 
+  // ── ?q= URL param ──
+  useEffect(() => {
+    const q = searchParams.get("q")
+    // Only run if q exists and we haven't already populated it for this specific query
+    if (q && text !== q) {
+      setIngest("text")
+      setText(q)
+      if (isMock) runMock(q)
+      else runReal({ type: "text", text: q }, q)
+    }
+  }, [searchParams, isMock, isReal, text, runMock, runReal]) // removed submitted dependency to allow re-runs
+
   const freshMockSteps = (): AgentStep[] =>
     STEP_DEFS.map((d, i) => ({ stepNumber: i + 1, name: d.name, status: "waiting", tool: d.tool, kind: "mock" }))
 
@@ -154,16 +166,24 @@ function InvestigateContent() {
     }
     if (runId.current !== id) return
     setResult(inv); setIsRunning(false)
-    // Save to history
-    addHistoryEntry({
+    // Save history — MongoDB first, localStorage fallback
+    const histEntry = {
       userId: user?.id ?? null,
       query: input,
       queryType: "text",
       verdict: inv.riskLevel,
       score: inv.riskScore,
       rationale: inv.rationale,
-    })
-  }, [])
+    }
+    addHistoryEntry(histEntry) // always save locally
+    if (user?.id && isReal) {
+      fetch(API.historySave(), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...histEntry, user_id: user.id, query_type: "text" }),
+      }).catch(() => { /* best-effort */ })
+    }
+  }, [user, isReal])
 
   // ── REAL runner: consume the SSE stream, map frames → steps + verdict ──
   const runReal = useCallback(async (body: InvestigateRequestBody, recapText: string) => {
@@ -200,17 +220,32 @@ function InvestigateContent() {
         }
         setResult(buildInvestigation(realAcc.current, recapText))
         setIsRunning(false)
-        // Save to history after real investigation completes
+        // Save history — MongoDB first, localStorage fallback
         const builtInv = buildInvestigation(realAcc.current, recapText)
-        addHistoryEntry({
+        const qType: "text" | "url" | "file" =
+          body && (body as {type:string}).type === "url" ? "url"
+          : body && ((body as {type:string}).type === "image" || (body as {type:string}).type === "pdf") ? "file"
+          : "text"
+        const histEntry = {
           userId: user?.id ?? null,
           query: recapText,
-          queryType: body && (body as {type:string}).type === "url" ? "url" : body && (body as {type:string}).type === "image" || (body as {type:string}).type === "pdf" ? "file" : "text",
+          queryType: qType,
           verdict: builtInv.riskLevel,
           score: builtInv.riskScore,
           rationale: builtInv.rationale,
           investigationId: realAcc.current.investigationId,
-        })
+        }
+        addHistoryEntry(histEntry) // always save locally
+        if (user?.id) {
+          fetch(API.historySave(), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              ...histEntry, user_id: user.id, query_type: qType,
+              investigation_id: realAcc.current.investigationId,
+            }),
+          }).catch(() => { /* best-effort */ })
+        }
         return
       }
       // per-step
@@ -263,7 +298,7 @@ function InvestigateContent() {
       setRunError(e instanceof Error ? e.message : "Investigation request failed.")
       setIsRunning(false)
     }
-  }, [])
+  }, [user])
 
   // ── unified submit ──
   const submit = useCallback(async () => {

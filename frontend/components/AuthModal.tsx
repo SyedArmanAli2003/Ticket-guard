@@ -51,7 +51,7 @@ export default function AuthModal({ open, onClose, defaultTab = "login" }: AuthM
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(6px)" }}
+          style={{ background: "rgba(0,0,0,0.85)" }}
           onClick={e => { if (e.target === e.currentTarget) onClose() }}
         >
           <motion.div

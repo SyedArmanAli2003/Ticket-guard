@@ -80,8 +80,6 @@ function Navbar() {
         className="fixed top-0 left-0 right-0 z-50 transition-colors duration-300"
         style={{
           background: solid ? "var(--tg-glass-bg)" : "transparent",
-          backdropFilter: solid ? "blur(12px)" : "none",
-          WebkitBackdropFilter: solid ? "blur(12px)" : "none",
           borderBottom: `1px solid ${solid ? "var(--tg-glass-border)" : "transparent"}`,
         }}
       >
@@ -251,8 +249,6 @@ function Navbar() {
               className="rounded-2xl p-4"
               style={{
                 background: "var(--tg-glass-bg-solid)",
-                backdropFilter: "blur(12px)",
-                WebkitBackdropFilter: "blur(12px)",
                 border: "1px solid var(--tg-glass-border)",
                 boxShadow: "var(--tg-shadow-lg)",
               }}

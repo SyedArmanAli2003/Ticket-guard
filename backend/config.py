@@ -57,6 +57,8 @@ COLL_TICKETS_SEEN = "tickets_seen"   # sha256 of barcodes/booking-refs already o
 COLL_REPORTS = "reports"             # user-submitted scam reports (change-stream source for /api/feed)
 COLL_INVESTIGATIONS = "investigations"  # persisted investigation results
 COLL_RULES = "official_rules"        # official-transfer rule engine knowledge
+COLL_USERS = "users"                 # registered users (email + hashed password)
+COLL_USER_HISTORY = "user_history"   # per-user investigation history (query, verdict, score, rationale)
 
 # Atlas Search indexes.
 VECTOR_INDEX = "scam_vector_index"   # $vectorSearch over scam_corpus.embedding

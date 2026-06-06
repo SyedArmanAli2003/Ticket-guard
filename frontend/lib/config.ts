@@ -60,4 +60,14 @@ export const API = {
   feed: () => `${apiBase()}/api/feed`,
   health: () => `${apiBase()}/api/health`,
   mcpInfo: () => `${apiBase()}/api/mcp/info`,
+  // Auth
+  register: () => `${apiBase()}/api/auth/register`,
+  login: () => `${apiBase()}/api/auth/login`,
+  // History (MongoDB-backed)
+  history: (userId: string) => `${apiBase()}/api/history/${encodeURIComponent(userId)}`,
+  historySave: () => `${apiBase()}/api/history/save`,
+  historyDeleteEntry: (entryId: string) => `${apiBase()}/api/history/entry/${encodeURIComponent(entryId)}`,
+  historyClear: (userId: string) => `${apiBase()}/api/history/${encodeURIComponent(userId)}/clear`,
+  // Admin
+  adminUsers: () => `${apiBase()}/api/admin/users`,
 }
