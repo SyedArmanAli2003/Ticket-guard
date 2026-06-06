@@ -1,111 +1,141 @@
-# PitchCraft 🚀
+<div align="center">
 
-**Turn a one-line startup idea into an investor-grade business plan — generated live by a Gemini agent that researches your market through MongoDB.**
+# 🛡️ TicketGuard
 
-PitchCraft is an autonomous **AI agent** built for the **Google Cloud Rapid Agent Hackathon** (MongoDB partner track). You type one sentence; the agent plans and executes a 7-step research mission — validating the idea, researching the market, building customer personas, writing the plan, projecting 3-year financials, analyzing risk, and producing a 30/60/90-day action plan — streaming every step (and every database query) to your screen in real time.
+### Spot ticket-resale scams before you pay.
 
-> Move beyond chat. PitchCraft **uses tools to accomplish a multi-step task**, keeping you in control with a human-in-the-loop gate when an idea looks risky.
+**An AI agent that investigates a suspicious ticket listing or seller DM and returns an evidence-backed scam-risk verdict — grounded in MongoDB, reasoned by Gemini.**
+
+[![Live Demo](https://img.shields.io/badge/▶_Live_Demo-frontend--nu--ochre.vercel.app-0d9488?style=for-the-badge)](https://frontend-nu-ochre-z41mw3z0l5.vercel.app)
+
+![Gemini 2.5 Flash](https://img.shields.io/badge/Gemini-2.5_Flash-4285F4?logo=google)
+![Google ADK](https://img.shields.io/badge/Google-Agent_Dev_Kit-34A853?logo=google)
+![MongoDB Atlas](https://img.shields.io/badge/MongoDB-Atlas_Vector_Search-00684A?logo=mongodb&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=nextdotjs)
+![FastAPI](https://img.shields.io/badge/FastAPI-SSE-009688?logo=fastapi&logoColor=white)
+![License: MIT](https://img.shields.io/badge/License-MIT-blue)
+
+</div>
 
 ---
 
-## 🏆 How PitchCraft meets the hackathon requirements
+## The problem
 
-| Requirement | How PitchCraft delivers |
+Major-event ticket resale is a fraud magnet — the FBI, FTC, and BBB are actively warning about a 2026 World Cup resale-scam wave. Buyers have no way to tell a real listing from a "pay me on Zelle, I'll email the PDF" trap until the money's gone.
+
+**TicketGuard** is a consumer agent that runs a real multi-step investigation on a pasted listing / DM / screenshot / URL and returns a verdict: **`SCAM` · `SUSPICIOUS` · `LIKELY-LEGIT`** — with a confidence score and cited evidence. It never claims a ticket is "authentic" (no third party can); it speaks only in **risk signals**.
+
+> Built for the **Google Cloud Rapid Agent Hackathon 2026 — MongoDB track.**
+
+---
+
+## 🏗️ Architecture — MongoDB is the brain
+
+```mermaid
+flowchart LR
+  U["👤 Paste DM · upload PDF/image · drop URL"] --> FE["Next.js UI<br/>(Vercel) · live SSE stream"]
+  FE -->|"POST /api/investigate"| BE["FastAPI + Google ADK<br/>Gemini 2.5 Flash"]
+
+  subgraph PIPE["8-step agent investigation"]
+    direction TB
+    N["1· Normalizer"] --> R["2· Hybrid Retrieval"] --> REP["3· Reputation"] --> F["4· Forgery / Duplicate"] --> S["5· Risk Scorer"] --> RULE["6· Transfer Rules"] --> V["7· Verdict"] --> P["8· Persist"]
+  end
+  BE --> PIPE
+
+  R <-->|"$vectorSearch + $search → $rankFusion<br/>via MongoDB MCP server"| DB[("MongoDB Atlas")]
+  REP <--> DB
+  F <-->|"sha256 barcode dedup"| DB
+  S <-->|"$group / $facet scoring"| DB
+  P --> DB
+  DB -.->|"change stream"| FE
+
+  classDef mongo fill:#00684A,color:#fff,stroke:#00684A,stroke-width:2px;
+  class DB,R,REP,F,S,P mongo
+```
+
+Every green node is real MongoDB work. The risk **score is computed in the database** (`$group`/`$facet`), not by the LLM — so it's reproducible and auditable. The verdict writer only *explains* the gathered evidence.
+
+---
+
+## 🏆 How it meets the hackathon bar
+
+| Requirement | TicketGuard |
 |---|---|
-| **Powered by Gemini** | Every reasoning step runs on **Gemini 2.5 Flash**. |
-| **Google Cloud Agent Builder** | The agent is built with the **Agent Development Kit (ADK)** and calls Gemini through **Vertex AI** on Google Cloud. |
-| **Integrates a Partner MCP server** | The agent connects to the **official MongoDB MCP server** (`mongodb-mcp-server`, stdio) and calls its tools (`find`, `aggregate`, `count`, schema) to ground its analysis in real data. |
-| **Meaningful partner use** | Beyond MCP, PitchCraft uses **MongoDB Atlas Vector Search** (Gemini embeddings) for retrieval-augmented market intelligence, plus Atlas for plan persistence + shareable links. |
-| **Multi-step agentic mission** | A 7-section pipeline where the agent autonomously decides which tools to call per section. |
-| **Runs on web** | Next.js frontend + FastAPI backend. |
-| **Hosted + open source** | Backend on **Cloud Run**, frontend on **Vercel**, MIT licensed. |
+| **Gemini agent, multi-step mission** | 8-step ADK pipeline (not a chatbot): normalize → retrieve → reputation → forgery → score → rules → verdict → persist |
+| **Integrates the MongoDB MCP server** | Agent reaches Atlas through the official `mongodb-mcp-server` (read-only `find`/`aggregate`/`count`/`collection-schema`) |
+| **Deep, meaningful MongoDB use** | **Vector Search + Atlas Search hybrid** (`$rankFusion` on 8.1+, code-fusion fallback) · server-side **`$group`/`$facet`** scoring · **change streams** for the live feed · barcode-hash **dedup** · agent memory |
+| **Human-in-the-loop** | Report / Find verified resale / Proceed — and **Report writes to Atlas → change stream → the global corpus gets smarter** |
+| **Multi-modal ingestion** | paste text · upload **PDF/screenshot** (Gemini vision OCR + tamper hints) · paste a **URL** |
+| **Runs on the web, hosted, open-source** | Next.js (Vercel) + FastAPI (Cloud Run / Render), MIT licensed |
+| **Honest by design** | No mock ever drives a verdict — DB-dependent steps return `not_configured` rather than faking |
 
 ---
 
-## 🏗️ Architecture
+## 🔎 The 8-step investigation
 
-```
-┌────────────┐   SSE    ┌──────────────────────── Cloud Run ───────────────────────┐
-│  Next.js   │ ───────► │  FastAPI  →  ADK agent (Gemini 2.5 Flash via Vertex AI)    │
-│  (Vercel)  │ ◄─────── │                 │                          │              │
-└────────────┘  stream  │                 ▼                          ▼              │
-   live steps           │   MongoDB MCP server (stdio)     search_market_intelligence│
-   + tool calls         │   find · aggregate · count        (Gemini embeddings +     │
-                        │          │                         Atlas $vectorSearch)     │
-                        └──────────┼──────────────────────────────────┼─────────────┘
-                                   ▼                                  ▼
-                          ┌─────────────────────  MongoDB Atlas  ─────────────────┐
-                          │  business_plans   ·   market_corpus (vector index)    │
-                          └────────────────────────────────────────────────────────┘
-```
+| # | Step | Engine | MongoDB |
+|---|------|--------|---------|
+| 1 | **Normalizer** | Gemini structured extraction | — |
+| 2 | **Hybrid Retrieval** | `$vectorSearch` + `$search`, fused | `scam_corpus` |
+| 3 | **Reputation** | typosquat distance + prior reports | `reports` |
+| 4 | **Forgery / Duplicate** | `sha256(barcode)` lookup + PDF/image tamper hints | `tickets_seen` |
+| 5 | **Risk Scorer** | server-side `$group`/`$facet` (not the LLM) | Atlas |
+| 6 | **Transfer Rules** | deterministic rule engine | `official_rules` |
+| 7 | **Verdict** | Gemini, grounded only on evidence | — |
+| 8 | **Persist** | agent memory | `investigations` |
 
-The agent does real tool use: in the **Research Market** step it calls Atlas Vector
-Search and queries the `business_plans` collection through the MongoDB MCP server,
-and those tool calls stream to the UI so you can watch it work.
-
----
-
-## 📦 Project structure
-
-```
-backend/    FastAPI + ADK agent
-  config.py     model + backend (AI Studio vs Vertex) + Atlas settings
-  agent.py      ADK LlmAgent: Gemini + MongoDB MCP toolset + vector-search tool
-  pipeline.py   7-section orchestration over the agent (streams SSE events)
-  db.py         Atlas: persistence, Gemini embeddings, vector search, seeding
-  main.py       FastAPI routes (SSE /api/generate, /api/plan, /api/mcp/info, ...)
-  Dockerfile    Cloud Run image (Node for MCP server + Python for ADK)
-frontend/   Next.js 14 (App Router, Tailwind)
+Real verdict from the live API (Atlas off → DB steps honestly `not_configured`):
+```jsonc
+{ "verdict": "SCAM", "confidence": 0.9,
+  "evidence": ["Unofficial PDF transfer", "Irreversible Zelle payment",
+               "Price 120 USD far below face 350 USD", "Urgency cues", "Violates official transfer rules"],
+  "engine": "gemini-2.5-flash · Google AI Studio" }
 ```
 
 ---
 
-## 🚀 Quick start (local)
+## 🧩 Tech stack
 
-### 1. MongoDB Atlas
-Create a free cluster, then **Network Access → Add IP → Allow from anywhere (0.0.0.0/0)**.
-Copy the connection string.
+- **Frontend** — Next.js 14 (App Router) + Tailwind + Framer Motion, light/dark, consumes SSE. Deploys to **Vercel**.
+- **Backend** — Python **FastAPI** + **Google ADK** agents, **Gemini 2.5 Flash** (AI Studio or Vertex), streams SSE. Deploys to **Cloud Run / Render** (Docker ships Node + Python so the MCP server runs).
+- **Data / brain** — **MongoDB Atlas**: Vector Search (`gemini-embedding` / `text-embedding-004`, 768-dim) + Atlas Search, change streams, the official MongoDB MCP server.
 
-### 2. Backend
+---
+
+## 🚀 Quick start
+
 ```bash
+# Backend
 cd backend
-python -m venv .venv && .venv\Scripts\activate     # Windows
-# source .venv/bin/activate                         # macOS/Linux
+python -m venv .venv && .venv\Scripts\activate      # (Windows)
 pip install -r requirements.txt
-cp .env.example .env        # fill MONGODB_URI + GOOGLE_API_KEY
-uvicorn main:app --reload --port 8000
-```
-Needs **Node.js** on PATH (the agent launches the MongoDB MCP server via `npx`).
+copy .env.example .env                               # fill MONGODB_URI + GOOGLE_API_KEY
+python scripts/setup_atlas.py                        # create indexes + seed corpus
+uvicorn main:app --reload --port 8001
 
-### 3. Frontend
-```bash
-cd frontend
-npm install
-npm run dev        # http://localhost:3000
+# Frontend (new shell)
+cd frontend && npm install && npm run dev            # http://localhost:3000
 ```
+
+Full setup, deployment, env vars, and **how to edit the Gemini prompts** → **[HANDOFF.md](HANDOFF.md)**.
 
 ---
 
-## ☁️ Deploy
+## 📊 Evaluation
 
-**Backend → Cloud Run** (uses Vertex AI; the service account provides Gemini auth):
-```bash
-cd backend
-gcloud run deploy pitchcraft-agent --source . --region us-central1 \
-  --allow-unauthenticated \
-  --set-env-vars GOOGLE_GENAI_USE_VERTEXAI=TRUE,GOOGLE_CLOUD_PROJECT=YOUR_PROJECT,GOOGLE_CLOUD_LOCATION=us-central1,MONGODB_URI=YOUR_URI,GEMINI_MODEL=gemini-2.5-flash
+A labeled set of synthetic scam/legit examples (`backend/data/eval_set.json`) measures precision / recall so impact is quantified, not claimed.
+
+## ⚖️ Responsible-use
+
+Decision-support only — **not a guarantee**; verify independently. Risk-signal language, never accusations. Synthetic demo data only. No trademarked marks.
+
+## 📂 Structure
+
 ```
-
-**Frontend → Vercel**: set `NEXT_PUBLIC_API_URL` to the Cloud Run URL and deploy.
-
----
-
-## 🔌 The MongoDB MCP integration (for judges)
-
-`GET /api/mcp/info` returns the live integration status. The agent loads the
-official `mongodb-mcp-server` over stdio (read-only) via ADK's `McpToolset`, and
-uses Atlas Vector Search for RAG. See [`backend/agent.py`](backend/agent.py) and
-[`backend/db.py`](backend/db.py).
+backend/   FastAPI + ADK agents + MongoDB (agent.py · pipeline.py · ingest.py · db.py · scripts/setup_atlas.py)
+frontend/  Next.js UI (app/ · components/ · lib/)
+HANDOFF.md Full contributor + deploy guide
+```
 
 ## License
-MIT — see [LICENSE](LICENSE).
+[MIT](LICENSE)
