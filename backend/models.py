@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class InvestigateRequest(BaseModel):
@@ -28,6 +28,19 @@ class InvestigateRequest(BaseModel):
     filename: Optional[str] = Field(default=None, max_length=400)
     content_type: Optional[str] = Field(default=None, max_length=200)
     url: Optional[str] = Field(default=None, max_length=2000)
+    # Optional per-request AI model selector. Validated against the (Gemini-only)
+    # models_registry so a bad id → 422; defaults to the primary model.
+    model: Optional[str] = Field(default="gemini-2.5-flash")
+
+    @field_validator("model")
+    @classmethod
+    def _validate_model(cls, v: Optional[str]) -> str:
+        from models_registry import DEFAULT_MODEL, MODELS
+        if not v:
+            return DEFAULT_MODEL
+        if v not in MODELS:
+            raise ValueError(f"Invalid model {v!r}. Choose from: {list(MODELS)}")
+        return v
 
     @model_validator(mode="after")
     def _require_payload_for_type(self) -> "InvestigateRequest":

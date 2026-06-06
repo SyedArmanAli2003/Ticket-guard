@@ -136,7 +136,7 @@ def _ensure_keys(obj: dict) -> dict:
 #   {"status":"error","reason":"..."}                       # parse/IO failure
 # --------------------------------------------------------------------------- #
 def normalize_text(text: str, extracted: dict | None = None,
-                   source: str = "text") -> dict:
+                   source: str = "text", model: str | None = None) -> dict:
     """Run the Gemini Normalizer on plain text. The shared core for all sources."""
     client = _gc()
     if client is None:
@@ -145,7 +145,7 @@ def normalize_text(text: str, extracted: dict | None = None,
         return {"status": "error", "reason": "empty content"}
     try:
         resp = client.models.generate_content(
-            model=config.GEMINI_MODEL,
+            model=model or config.GEMINI_MODEL,
             contents=_NORMALIZER_PROMPT + text.strip()[:8000],
             config=types.GenerateContentConfig(
                 temperature=0.0,
@@ -165,7 +165,7 @@ def normalize_text(text: str, extracted: dict | None = None,
         return {"status": "error", "reason": str(exc)[:160]}
 
 
-def normalize_pdf(pdf_bytes: bytes) -> dict:
+def normalize_pdf(pdf_bytes: bytes, model: str | None = None) -> dict:
     """Extract PDF text + metadata (pypdf), then run the Gemini Normalizer."""
     text, meta, tamper = "", {}, []
     if pypdf is not None:
@@ -190,11 +190,12 @@ def normalize_pdf(pdf_bytes: bytes) -> dict:
                  "text_chars": len(text)}
     if not text.strip():
         # Scanned PDF with no text layer — hand the raw bytes to Gemini as a file.
-        return _normalize_binary(pdf_bytes, "application/pdf", extracted, "pdf")
-    return normalize_text(text, extracted, "pdf")
+        return _normalize_binary(pdf_bytes, "application/pdf", extracted, "pdf", model)
+    return normalize_text(text, extracted, "pdf", model)
 
 
-def normalize_image(image_bytes: bytes, mime: str = "image/png") -> dict:
+def normalize_image(image_bytes: bytes, mime: str = "image/png",
+                    model: str | None = None) -> dict:
     """Gemini 2.5 multimodal OCR/parse of an image + tamper hints + barcode digits."""
     barcode = decode_barcode(image_bytes)
     extracted: dict[str, Any] = {"barcode": barcode}
@@ -209,7 +210,7 @@ def normalize_image(image_bytes: bytes, mime: str = "image/png") -> dict:
             "and infer the fields.)"
         )
         resp = client.models.generate_content(
-            model=config.GEMINI_MODEL,
+            model=model or config.GEMINI_MODEL,
             contents=[types.Part.from_bytes(data=image_bytes, mime_type=mime), prompt],
             config=types.GenerateContentConfig(temperature=0.0,
                                                response_mime_type="application/json"),
@@ -228,7 +229,7 @@ def normalize_image(image_bytes: bytes, mime: str = "image/png") -> dict:
         return {"status": "error", "reason": str(exc)[:160]}
 
 
-def normalize_url(url: str) -> dict:
+def normalize_url(url: str, model: str | None = None) -> dict:
     """Fetch a URL (httpx), extract readable text (BeautifulSoup), then normalize."""
     if httpx is None:
         return {"status": "error", "reason": "httpx not installed"}
@@ -253,7 +254,7 @@ def normalize_url(url: str) -> dict:
         text = re.sub(r"<[^>]+>", " ", html)
 
     host = re.sub(r"^https?://", "", url).split("/")[0]
-    result = normalize_text(text, {"url": url, "fetched_chars": len(text)}, "url")
+    result = normalize_text(text, {"url": url, "fetched_chars": len(text)}, "url", model)
     # Ensure the real fetched domain wins over any model guess.
     if result.get("status") == "ok":
         result["listing"]["domain"] = host
@@ -263,14 +264,15 @@ def normalize_url(url: str) -> dict:
 # --------------------------------------------------------------------------- #
 # Helpers
 # --------------------------------------------------------------------------- #
-def _normalize_binary(data: bytes, mime: str, extracted: dict, source: str) -> dict:
+def _normalize_binary(data: bytes, mime: str, extracted: dict, source: str,
+                      model: str | None = None) -> dict:
     """Hand raw bytes (e.g. scanned PDF) to Gemini for OCR + extraction."""
     client = _gc()
     if client is None:
         return {"status": "not_configured", "reason": "Gemini key missing (GOOGLE_API_KEY)"}
     try:
         resp = client.models.generate_content(
-            model=config.GEMINI_MODEL,
+            model=model or config.GEMINI_MODEL,
             contents=[types.Part.from_bytes(data=data, mime_type=mime),
                       _NORMALIZER_PROMPT + "(OCR the attached document.)"],
             config=types.GenerateContentConfig(temperature=0.0,
@@ -339,18 +341,19 @@ def decode_barcode(image_bytes: bytes) -> str | None:
     return None
 
 
-def decode_file(file_bytes: bytes, filename: str, content_type: str | None) -> dict:
+def decode_file(file_bytes: bytes, filename: str, content_type: str | None,
+                model: str | None = None) -> dict:
     """Route an uploaded file to the right normalizer by type."""
     ct = (content_type or "").lower()
     name = (filename or "").lower()
     if ct == "application/pdf" or name.endswith(".pdf"):
-        return normalize_pdf(file_bytes)
+        return normalize_pdf(file_bytes, model)
     if ct.startswith("image/") or name.rsplit(".", 1)[-1] in {"png", "jpg", "jpeg", "webp", "gif"}:
         mime = ct if ct.startswith("image/") else "image/png"
-        return normalize_image(file_bytes, mime)
+        return normalize_image(file_bytes, mime, model)
     # Unknown: treat as UTF-8 text.
     try:
-        return normalize_text(file_bytes.decode("utf-8", "ignore"), {"filename": filename}, "text")
+        return normalize_text(file_bytes.decode("utf-8", "ignore"), {"filename": filename}, "text", model)
     except Exception as exc:  # noqa: BLE001
         return {"status": "error", "reason": f"unsupported file: {str(exc)[:100]}"}
 

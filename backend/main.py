@@ -33,6 +33,7 @@ import chat
 import config
 import db
 import pipeline
+import models_registry as registry
 from models import InvestigateRequest, ReportRequest, ChatRequest
 
 # SSE headers: disable proxy buffering so events flush immediately.
@@ -82,10 +83,11 @@ async def investigate(req: InvestigateRequest):
                                 "risk_score","engine"}}
     """
     source = req.to_source()
+    model = req.model
 
     async def stream():
         try:
-            async for ev in pipeline.run_investigation(source):
+            async for ev in pipeline.run_investigation(source, model):
                 yield _sse(ev)
         except Exception as exc:  # noqa: BLE001 - never break the stream mid-flight
             yield _sse({"step": 99, "name": "Error", "status": "error",
@@ -108,7 +110,7 @@ async def check(req: InvestigateRequest):
     On a hard stop (no Gemini key, or verdict failed):
       {"status":"not_configured"|"error","reason":str,"step":n}
     """
-    result = await pipeline.investigate_sync(req.to_source())
+    result = await pipeline.investigate_sync(req.to_source(), req.model)
     return result
 
 
@@ -221,6 +223,25 @@ async def health_full():
         "vector_index": st.get("vector_index", False),
         "text_index": st.get("text_index", False),
         "atlas_error": st.get("error"),
+        # Multi-model (Gemini-only registry).
+        "default_model": registry.DEFAULT_MODEL,
+        "models_available": [m["id"] for m in registry.get_all_models() if m["available"]],
+    }
+
+
+# --------------------------------------------------------------------------- #
+# GET /api/models — available AI models for the frontend selector (Gemini-only)
+# --------------------------------------------------------------------------- #
+@app.get("/api/models")
+async def list_models():
+    """Available AI models for the frontend selector. Gemini-only by design
+    (hackathon compliance); the fallback tiers share the Google key but each has
+    its own per-model free-tier quota bucket."""
+    return {
+        "models": registry.get_all_models(),
+        "default": registry.DEFAULT_MODEL,
+        "fallback_order": registry.FALLBACK_ORDER,
+        "primary_is_gemini": True,
     }
 
 
