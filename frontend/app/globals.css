@@ -112,6 +112,15 @@ html { scroll-behavior: smooth; }
 /* Gauge needle/ring fill helper (stroke driven inline) */
 @keyframes gaugeIn { from { stroke-dashoffset: var(--dash-full); } to { stroke-dashoffset: var(--dash-to); } }
 
+/* Skeleton loading shimmer (route-level loading.tsx) */
+@keyframes skeletonSweep { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+.skeleton-shimmer::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.07), transparent);
+  animation: skeletonSweep 1.4s ease-in-out infinite;
+  will-change: transform;
+}
+
 /* ── Premium animated background (gradient mesh + grid + grain) ───────────── */
 @keyframes auroraA {
   0%,100% { transform: translate3d(-6%,-3%,0) scale(1);    }
@@ -183,6 +192,7 @@ html { scroll-behavior: smooth; }
   .bg-aurora .blob,
   .bg-grid { animation: none !important; }
   .scan-shimmer::after { animation: none !important; opacity: 0; }
+  .skeleton-shimmer::after { animation: none !important; opacity: 0; }
   .glow-breathe { animation: none !important; opacity: 0.75; transform: none; }
   .live-dot { animation: none !important; }
   .animate-fade-up { opacity: 1; animation: none !important; }

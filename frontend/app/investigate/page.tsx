@@ -1,6 +1,8 @@
 "use client"
 import { useState, useEffect, useRef, useCallback, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
+import { motion, AnimatePresence } from "framer-motion"
+import { Sparkles, ArrowRight, ArrowLeft, Search } from "lucide-react"
 import Navbar from "@/components/Navbar"
 import InvestigationStep from "@/components/InvestigationStep"
 import RiskCard from "@/components/RiskCard"
@@ -12,6 +14,7 @@ import {
   seedFeed,
   feedItemFromInvestigation,
 } from "@/lib/mock"
+import { usePrefersReducedMotion, staggerContainer, fadeUpItem, EASE_OUT } from "@/lib/motion"
 
 // The 5-step mock plan. Each step maps to a slice of the Investigation result.
 const STEP_DEFS: {
@@ -68,6 +71,7 @@ const wait = (ms: number) => new Promise(res => setTimeout(res, ms))
 
 function InvestigateContent() {
   const searchParams = useSearchParams()
+  const reduced = usePrefersReducedMotion()
   const [text, setText] = useState("")
   const [submitted, setSubmitted] = useState(false)
   const [steps, setSteps] = useState<AgentStep[]>([])
@@ -168,17 +172,22 @@ function InvestigateContent() {
           {/* ── Main column ──────────────────────────────────────────── */}
           <div>
             {!submitted && (
-              <div className="animate-fade-up">
-                <h1 className="font-bold mb-3 tracking-tight" style={{ fontSize: "clamp(1.8rem,4.5vw,3rem)", color: "white" }}>
+              <motion.div
+                variants={staggerContainer(0.08, 0.04)}
+                initial={reduced ? false : "hidden"}
+                animate="show"
+              >
+                <motion.h1 variants={fadeUpItem} className="font-bold mb-3 tracking-tight font-display" style={{ fontSize: "clamp(1.8rem,4.5vw,3rem)", color: "white" }}>
                   Check a resale listing
-                </h1>
-                <p className="mb-6 text-sm" style={{ color: "rgba(255,255,255,0.45)", maxWidth: 560, lineHeight: 1.6 }}>
+                </motion.h1>
+                <motion.p variants={fadeUpItem} className="mb-6 text-sm" style={{ color: "rgba(255,255,255,0.45)", maxWidth: 560, lineHeight: 1.6 }}>
                   Paste a suspicious listing or seller DM. The agent extracts the
                   signals, runs a hybrid search over a known-scam corpus, and
                   returns an evidence-backed risk verdict.
-                </p>
+                </motion.p>
 
-                <textarea
+                <motion.textarea
+                  variants={fadeUpItem}
                   value={text}
                   onChange={e => setText(e.target.value)}
                   placeholder="Paste a resale listing or seller DM here…"
@@ -194,30 +203,38 @@ function InvestigateContent() {
                   onBlur={e => (e.target.style.borderColor = "rgba(255,255,255,0.08)")}
                   onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) runInvestigation(text) }}
                 />
-                <div className="flex justify-between items-center mt-2 mb-6 flex-wrap gap-2">
+                <motion.div variants={fadeUpItem} className="flex justify-between items-center mt-2 mb-6 flex-wrap gap-2">
                   <button
                     onClick={fillExample}
-                    className="text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
+                    className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
                     style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.1)" }}
                     onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
                     onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}
                   >
-                    ✦ Try an example
+                    <Sparkles size={12} strokeWidth={2.2} /> Try an example
                   </button>
                   <p className="text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>{text.length} / 600 · ⌘/Ctrl + Enter</p>
-                </div>
+                </motion.div>
 
-                <button
+                <motion.button
+                  variants={fadeUpItem}
                   onClick={() => runInvestigation(text)}
                   disabled={!text.trim() || isRunning}
-                  className="w-full py-4 rounded-xl font-semibold text-white text-sm cursor-pointer transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                  whileTap={reduced || !text.trim() || isRunning ? undefined : { scale: 0.99 }}
+                  className="w-full py-4 rounded-xl font-semibold text-white text-sm cursor-pointer transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
                   style={{ background: "linear-gradient(180deg, hsl(160,84%,42%), hsl(168,80%,34%))", boxShadow: "0 8px 24px rgba(16,185,129,0.25)" }}
                 >
-                  {isRunning ? "Investigating…" : "Investigate this listing →"}
-                </button>
+                  {isRunning ? (
+                    "Investigating…"
+                  ) : (
+                    <>
+                      <Search size={16} strokeWidth={2.4} /> Investigate this listing <ArrowRight size={15} strokeWidth={2.4} />
+                    </>
+                  )}
+                </motion.button>
 
                 {/* quick example pills */}
-                <div className="mt-6">
+                <motion.div variants={fadeUpItem} className="mt-6">
                   <p className="text-xs mb-2 uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.3)" }}>Or try one of these</p>
                   <div className="flex flex-wrap gap-2">
                     {SAMPLE_LISTINGS.map(s => (
@@ -233,12 +250,12 @@ function InvestigateContent() {
                       </button>
                     ))}
                   </div>
-                </div>
+                </motion.div>
 
-                <p className="text-xs mt-8" style={{ color: "rgba(255,255,255,0.28)", lineHeight: 1.5 }}>
+                <motion.p variants={fadeUpItem} className="text-xs mt-8" style={{ color: "rgba(255,255,255,0.28)", lineHeight: 1.5 }}>
                   Decision-support only, not a guarantee — verify independently. About the data: synthetic demo data only.
-                </p>
-              </div>
+                </motion.p>
+              </motion.div>
             )}
 
             {submitted && (
@@ -254,27 +271,36 @@ function InvestigateContent() {
                     </div>
                     <p className="text-xs flex-shrink-0 mt-4" style={{ color: "rgba(255,255,255,0.4)" }}>{completedCount}/{TOTAL}</p>
                   </div>
-                  <div className="w-full h-1 rounded-full" style={{ background: "rgba(255,255,255,0.06)" }}>
-                    <div className="h-full rounded-full transition-all duration-700"
-                      style={{ width: `${(completedCount / TOTAL) * 100}%`, background: "hsl(160,84%,46%)" }} />
+                  <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+                    <motion.div className="h-full rounded-full"
+                      style={{ background: "hsl(160,84%,46%)", boxShadow: "0 0 8px rgba(16,185,129,0.5)" }}
+                      animate={{ width: `${(completedCount / TOTAL) * 100}%` }}
+                      transition={{ duration: reduced ? 0 : 0.7, ease: EASE_OUT }} />
                   </div>
                 </div>
 
-                {steps.map(step => <InvestigationStep key={step.stepNumber} step={step} />)}
+                {steps.map(step => <InvestigationStep key={step.stepNumber} step={step} total={TOTAL} />)}
 
-                {result && !isRunning && (
-                  <div className="mt-5">
-                    <RiskCard investigation={result} onReport={handleReport} reported={reported} />
-                  </div>
-                )}
+                <AnimatePresence>
+                  {result && !isRunning && (
+                    <motion.div
+                      className="mt-5"
+                      initial={reduced ? false : { opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      <RiskCard investigation={result} onReport={handleReport} reported={reported} />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {!isRunning && (
                   <button
                     onClick={reset}
-                    className="w-full mt-2 py-3 rounded-xl font-medium text-sm cursor-pointer"
+                    className="w-full mt-2 py-3 rounded-xl font-medium text-sm cursor-pointer inline-flex items-center justify-center gap-1.5 transition-colors hover:bg-white/5"
                     style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.08)" }}
                   >
-                    ← Check another listing
+                    <ArrowLeft size={15} strokeWidth={2.2} /> Check another listing
                   </button>
                 )}
               </>

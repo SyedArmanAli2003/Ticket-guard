@@ -1,7 +1,16 @@
 "use client"
 import { memo } from "react"
+import { motion } from "framer-motion"
+import { Leaf, Search, Sparkles, Settings2, Loader2, Check } from "lucide-react"
 import type { AgentStep, Entity, HybridMatch, RuleCheck } from "@/lib/types"
 import ContributionBars from "@/components/ContributionBars"
+import {
+  usePrefersReducedMotion,
+  staggerContainer,
+  cardRise,
+  chipSlideIn,
+  EASE_OUT,
+} from "@/lib/motion"
 
 type ToolKey = AgentStep["tool"]
 
@@ -31,31 +40,111 @@ function ToolBadge({ tool }: { tool: ToolKey }) {
   )
 }
 
-function ActivityFeed({ activity }: { activity: NonNullable<AgentStep["activity"]> }) {
+// ── Animated circular progress ring around the step index ──────────────────────
+// Shows step n / total as a filled arc. Snaps to full arc under reduced motion.
+function StepRing({
+  stepNumber,
+  total,
+  status,
+  reduced,
+}: {
+  stepNumber: number
+  total: number
+  status: AgentStep["status"]
+  reduced: boolean
+}) {
+  const size = 36
+  const stroke = 2.5
+  const r = (size - stroke) / 2
+  const circ = 2 * Math.PI * r
+  const pct = stepNumber / total
+  const ringColor =
+    status === "complete" ? "rgb(74,222,128)" :
+    status === "running"  ? "hsl(160,84%,55%)" :
+    status === "error"    ? "rgb(248,113,113)" :
+                            "rgba(255,255,255,0.25)"
+  const fill = {
+    waiting:  { background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.4)" },
+    running:  { background: "rgba(16,185,129,0.18)",  color: "hsl(160,84%,72%)" },
+    complete: { background: "rgba(34,197,94,0.14)",   color: "rgb(74,222,128)" },
+    error:    { background: "rgba(239,68,68,0.15)",   color: "rgb(252,165,165)" },
+  }[status]
+
   return (
-    <div className="mt-3 space-y-1.5">
-      {activity.map((a, i) => {
-        const isMongo = a.source === "mongodb"
-        const icon = isMongo ? "🍃" : a.source === "vector" ? "🔎" : a.source === "gemini" ? "✦" : "⚙"
-        const color = isMongo ? "rgb(74,222,128)" : a.source === "vector" ? "rgb(125,211,252)" : "rgba(255,255,255,0.55)"
-        const sourceLabel =
-          a.source === "vector" ? "Atlas Vector Search"
-          : a.source === "mongodb" ? "MongoDB MCP"
-          : a.source === "gemini" ? "Gemini 2.5"
-          : "rule engine"
-        return (
-          <div key={i} className="flex items-center gap-2 text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>
-            <span>{icon}</span>
-            <span style={{ color }}>{sourceLabel}</span>
-            <code style={{ color: "rgba(255,255,255,0.45)" }}>{a.tool}{a.preview ? `("${a.preview}")` : "()"}</code>
-          </div>
-        )
-      })}
+    <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }} aria-hidden>
+        {/* track */}
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} />
+        {/* progress arc */}
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={ringColor}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          initial={{ strokeDashoffset: reduced ? circ * (1 - pct) : circ }}
+          animate={{ strokeDashoffset: circ * (1 - pct) }}
+          transition={{ duration: reduced ? 0 : 0.7, ease: EASE_OUT }}
+          style={{ filter: status === "running" ? "drop-shadow(0 0 4px rgba(16,185,129,0.55))" : "none" }}
+        />
+      </svg>
+      <div
+        className="absolute inset-[3px] rounded-full flex items-center justify-center text-xs font-bold"
+        style={fill}
+      >
+        {status === "complete" ? <Check size={14} strokeWidth={3} /> : stepNumber}
+      </div>
     </div>
   )
 }
 
-function InvestigationStep({ step }: { step: AgentStep }) {
+const SOURCE_META = {
+  vector:  { label: "Atlas Vector Search", color: "rgb(125,211,252)", Icon: Search },
+  mongodb: { label: "MongoDB MCP",         color: "rgb(74,222,128)",  Icon: Leaf },
+  gemini:  { label: "Gemini 2.5",          color: "hsl(258,80%,80%)", Icon: Sparkles },
+  system:  { label: "rule engine",         color: "rgba(255,255,255,0.55)", Icon: Settings2 },
+} as const
+
+// Tool-call chips that slide + fade in (staggered) while/after a step runs.
+function ActivityFeed({
+  activity,
+  reduced,
+}: {
+  activity: NonNullable<AgentStep["activity"]>
+  reduced: boolean
+}) {
+  return (
+    <motion.div
+      className="mt-3 space-y-1.5"
+      variants={staggerContainer(0.08)}
+      initial={reduced ? false : "hidden"}
+      animate="show"
+    >
+      {activity.map((a, i) => {
+        const meta = SOURCE_META[a.source] ?? SOURCE_META.gemini
+        const Icon = meta.Icon
+        return (
+          <motion.div
+            key={i}
+            variants={chipSlideIn}
+            className="inline-flex items-center gap-2 text-xs rounded-md px-2 py-1 mr-1.5"
+            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+          >
+            <Icon size={12} style={{ color: meta.color }} strokeWidth={2.2} />
+            <span style={{ color: meta.color }}>{meta.label}</span>
+            <code style={{ color: "rgba(255,255,255,0.45)" }}>{a.tool}{a.preview ? `("${a.preview}")` : "()"}</code>
+          </motion.div>
+        )
+      })}
+    </motion.div>
+  )
+}
+
+function InvestigationStep({ step, total }: { step: AgentStep; total: number }) {
+  const reduced = usePrefersReducedMotion()
   const { stepNumber, name, status, data, startedAt, completedAt } = step
   const duration = startedAt && completedAt ? ((completedAt - startedAt) / 1000).toFixed(1) + "s" : null
 
@@ -66,41 +155,37 @@ function InvestigationStep({ step }: { step: AgentStep }) {
     error:    "rgba(239,68,68,0.4)",
   }[status]
 
-  const circleStyle = {
-    waiting:  { background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.35)" },
-    running:  { background: "rgba(16,185,129,0.2)",   color: "hsl(160,84%,70%)" },
-    complete: { background: "rgba(34,197,94,0.15)",   color: "rgb(74,222,128)" },
-    error:    { background: "rgba(239,68,68,0.15)",   color: "rgb(252,165,165)" },
-  }[status]
-
   return (
-    <div
-      className="w-full rounded-2xl p-5 mb-3 transition-all duration-300"
+    <motion.div
+      variants={cardRise}
+      initial={reduced ? false : "hidden"}
+      animate="show"
+      layout={!reduced}
+      className="relative w-full rounded-2xl p-5 mb-3 overflow-hidden transition-colors duration-300"
       style={{
         background: "hsl(240,15%,8%)",
         border: `1px solid ${borderColor}`,
-        opacity: status === "waiting" ? 0.5 : 1,
+        opacity: status === "waiting" ? 0.55 : 1,
         boxShadow: status === "running" ? "0 0 20px rgba(16,185,129,0.12)" : "none",
       }}
     >
-      <div className="flex justify-between items-center">
+      {/* scanning shimmer sweep while running (gated in CSS by reduced-motion) */}
+      {status === "running" && <span className="scan-shimmer" aria-hidden />}
+
+      <div className="relative flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 ${status === "running" ? "animate-pulse" : ""}`}
-            style={circleStyle}
-          >
-            {status === "complete" ? "✓" : stepNumber}
-          </div>
+          <StepRing stepNumber={stepNumber} total={total} status={status} reduced={reduced} />
           <div>
             <p className="text-sm font-medium text-white">{name}</p>
             {status === "running" && (
-              <p className="text-xs mt-0.5" style={{ color: "hsl(160,72%,68%)" }}>
-                ⚡ {WORKER[stepNumber]} is working...
+              <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "hsl(160,72%,68%)" }}>
+                <Loader2 size={11} className={reduced ? "" : "animate-spin"} strokeWidth={2.4} />
+                {WORKER[stepNumber]} is working…
               </p>
             )}
             {status === "complete" && duration && (
-              <p className="text-xs mt-0.5" style={{ color: "rgba(74,222,128,0.8)" }}>
-                ✓ {WORKER[stepNumber]} · done in {duration}
+              <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "rgba(74,222,128,0.85)" }}>
+                <Check size={11} strokeWidth={3} /> {WORKER[stepNumber]} · done in {duration}
               </p>
             )}
           </div>
@@ -109,7 +194,7 @@ function InvestigationStep({ step }: { step: AgentStep }) {
         <div className="flex items-center gap-2">
           {status !== "waiting" && <ToolBadge tool={step.tool} />}
           {status === "running" && (
-            <div className="w-4 h-4 rounded-full border-2 animate-spin"
+            <div className={`w-4 h-4 rounded-full border-2 ${reduced ? "" : "animate-spin"}`}
               style={{ borderColor: "hsl(160,84%,46%)", borderTopColor: "transparent" }} />
           )}
           {status === "complete" && <span className="text-xs" style={{ color: "rgb(74,222,128)" }}>Done</span>}
@@ -118,29 +203,37 @@ function InvestigationStep({ step }: { step: AgentStep }) {
       </div>
 
       {step.activity && step.activity.length > 0 && status !== "waiting" && (
-        <ActivityFeed activity={step.activity} />
+        <div className="relative">
+          <ActivityFeed activity={step.activity} reduced={reduced} />
+        </div>
       )}
 
       <div className={`step-content ${status === "complete" && data ? "open" : ""}`}>
         {status === "complete" && data && (
           <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
-            <StepData stepNumber={stepNumber} data={data} />
+            <StepData stepNumber={stepNumber} data={data} reduced={reduced} />
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   )
 }
 
-function StepData({ stepNumber, data }: { stepNumber: number; data: Record<string, unknown> }) {
-  // Step 1 — extracted entity chips
+function StepData({ stepNumber, data, reduced }: { stepNumber: number; data: Record<string, unknown>; reduced: boolean }) {
+  // Step 1 — extracted entity chips (stagger in)
   if (stepNumber === 1) {
     const entities = (data.entities as Entity[] | undefined) || []
     return (
-      <div className="flex flex-wrap gap-2">
+      <motion.div
+        className="flex flex-wrap gap-2"
+        variants={staggerContainer(0.05)}
+        initial={reduced ? false : "hidden"}
+        animate="show"
+      >
         {entities.map((e, i) => (
-          <span
+          <motion.span
             key={i}
+            variants={chipSlideIn}
             className="text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"
             style={{
               background: e.flagged ? "rgba(239,68,68,0.1)" : "rgba(34,197,94,0.1)",
@@ -151,9 +244,9 @@ function StepData({ stepNumber, data }: { stepNumber: number; data: Record<strin
             <span style={{ opacity: 0.7 }}>{e.flagged ? "⚠" : "✓"}</span>
             <span style={{ color: "rgba(255,255,255,0.5)" }}>{e.kind}:</span>
             <span className="font-medium">{e.value}</span>
-          </span>
+          </motion.span>
         ))}
-      </div>
+      </motion.div>
     )
   }
 
@@ -173,10 +266,19 @@ function StepData({ stepNumber, data }: { stepNumber: number; data: Record<strin
             $unionWith · rank fusion
           </span>
         </div>
-        <div className="space-y-2.5">
+        <motion.div
+          className="space-y-2.5"
+          variants={staggerContainer(0.07)}
+          initial={reduced ? false : "hidden"}
+          animate="show"
+        >
           {matches.map((m, i) => (
-            <div key={i} className="rounded-xl p-3 flex items-center justify-between gap-3"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+            <motion.div
+              key={i}
+              variants={cardRise}
+              className="rounded-xl p-3 flex items-center justify-between gap-3"
+              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+            >
               <div className="min-w-0">
                 <p className="text-xs font-medium text-white truncate">{m.label}</p>
                 <p className="text-xs mt-0.5 italic truncate" style={{ color: "rgba(255,255,255,0.45)" }}>{m.excerpt}</p>
@@ -188,9 +290,9 @@ function StepData({ stepNumber, data }: { stepNumber: number; data: Record<strin
                   <p style={{ fontSize: "0.55rem", color: "rgba(255,255,255,0.35)" }}>score</p>
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     )
   }
@@ -206,8 +308,16 @@ function StepData({ stepNumber, data }: { stepNumber: number; data: Record<strin
           <span className="text-3xl font-bold tabular-nums" style={{ color }}>{score}</span>
           <span className="text-sm mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>/100</span>
         </div>
-        <div className="flex-1 h-2 rounded-full" style={{ background: "rgba(255,255,255,0.07)" }}>
-          <div className="bar-grow h-full rounded-full" style={{ width: `${score}%`, background: color, boxShadow: `0 0 10px ${color}` }} />
+        <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+          <motion.div
+            className="h-full rounded-full"
+            style={{ background: color, boxShadow: `0 0 10px ${color}`, transformOrigin: "left center" }}
+            initial={{ scaleX: reduced ? 1 : 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: reduced ? 0 : 0.7, ease: EASE_OUT }}
+          >
+            <div style={{ width: `${score}%`, height: "100%" }} />
+          </motion.div>
         </div>
         <span className="text-xs px-2 py-0.5 rounded-full font-medium"
           style={{ background: `${color}22`, color, border: `1px solid ${color}44` }}>
