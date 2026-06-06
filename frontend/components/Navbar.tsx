@@ -5,6 +5,7 @@ import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion"
 import { Menu, X, ArrowRight } from "lucide-react"
 import { usePrefersReducedMotion, EASE_OUT } from "@/lib/motion"
 import { getMode } from "@/lib/config"
+import ThemeToggle from "@/components/ThemeToggle"
 
 const NAV_LINKS = [
   { label: "How It Works", href: "/#how" },
@@ -18,13 +19,13 @@ function ShieldGlyph() {
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden
       style={{ display: "inline-block", verticalAlign: "-3px", marginRight: "2px" }}>
       <path d="M12 2.5 4 5.2v6.1c0 4.6 3.2 8.2 8 10.2 4.8-2 8-5.6 8-10.2V5.2L12 2.5Z"
-        fill="url(#tgNav)" stroke="hsl(160,84%,55%)" strokeWidth="1.1" strokeLinejoin="round" />
-      <path d="m8.6 12.1 2.3 2.3 4.4-4.6" stroke="#04110d" strokeWidth="1.8"
+        fill="url(#tgNav)" stroke="var(--tg-accent)" strokeWidth="1.1" strokeLinejoin="round" />
+      <path d="m8.6 12.1 2.3 2.3 4.4-4.6" stroke="var(--tg-accent-contrast)" strokeWidth="1.8"
         strokeLinecap="round" strokeLinejoin="round" />
       <defs>
         <linearGradient id="tgNav" x1="4" y1="2.5" x2="20" y2="21.5" gradientUnits="userSpaceOnUse">
-          <stop stopColor="hsl(160,84%,52%)" />
-          <stop offset="1" stopColor="hsl(170,80%,38%)" />
+          <stop stopColor="var(--tg-accent)" />
+          <stop offset="1" stopColor="var(--tg-accent-2)" />
         </linearGradient>
       </defs>
     </svg>
@@ -64,14 +65,19 @@ function Navbar() {
     return path === pathname
   }
 
+  // Solid chrome appears as soon as the page is scrolled OR the mobile menu is
+  // open, so page content never bleeds through the bar.
+  const solid = scrolled || open
+
   return (
     <>
       <nav
         className="fixed top-0 left-0 right-0 z-50 transition-colors duration-300"
         style={{
-          background: scrolled || open ? "hsla(240,28%,4%,0.72)" : "transparent",
-          backdropFilter: scrolled || open ? "blur(12px)" : "none",
-          borderBottom: `1px solid ${scrolled || open ? "rgba(255,255,255,0.07)" : "transparent"}`,
+          background: solid ? "var(--tg-glass-bg)" : "transparent",
+          backdropFilter: solid ? "blur(12px)" : "none",
+          WebkitBackdropFilter: solid ? "blur(12px)" : "none",
+          borderBottom: `1px solid ${solid ? "var(--tg-glass-border)" : "transparent"}`,
         }}
       >
         <div className="flex justify-between items-center px-6 lg:px-16 py-5">
@@ -82,13 +88,13 @@ function Navbar() {
               onClick={() => go("/")}
             >
               <ShieldGlyph />
-              <span style={{ color: "rgba(255,255,255,0.92)" }}>Ticket</span>
-              <span style={{ color: "hsl(160,84%,52%)" }}>Guard</span>
+              <span style={{ color: "var(--tg-text)" }}>Ticket</span>
+              <span style={{ color: "var(--tg-accent)" }}>Guard</span>
             </span>
             {demoMode && (
               <span
                 className="text-xs px-2 py-0.5 rounded-full font-medium select-none"
-                style={{ background: "rgba(234,179,8,0.12)", color: "rgb(250,204,21)", border: "1px solid rgba(234,179,8,0.3)" }}
+                style={{ background: "var(--tg-warn-tint)", color: "var(--tg-warn)", border: "1px solid var(--tg-warn-border)" }}
                 title="No live backend — synthetic demo data"
               >
                 DEMO
@@ -105,47 +111,53 @@ function Navbar() {
                   key={link.label}
                   href={link.href}
                   className="group relative text-sm uppercase tracking-widest cursor-pointer transition-colors duration-200"
-                  style={{ color: active ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.45)" }}
-                  onMouseEnter={e => (e.currentTarget.style.color = "rgba(255,255,255,0.85)")}
-                  onMouseLeave={e => (e.currentTarget.style.color = active ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.45)")}
+                  style={{ color: active ? "var(--tg-text)" : "var(--tg-text-3)" }}
+                  onMouseEnter={e => (e.currentTarget.style.color = "var(--tg-text)")}
+                  onMouseLeave={e => (e.currentTarget.style.color = active ? "var(--tg-text)" : "var(--tg-text-3)")}
                 >
                   {link.label}
                   {/* animated underline — full when active, grows on hover */}
                   <span
                     className="absolute -bottom-1.5 left-0 h-px transition-all duration-300 group-hover:w-full"
-                    style={{ width: active ? "100%" : 0, background: "hsl(160,84%,52%)" }}
+                    style={{ width: active ? "100%" : 0, background: "var(--tg-accent)" }}
                   />
                 </a>
               )
             })}
           </div>
 
-          {/* Desktop CTA */}
-          <button
-            onClick={() => go("/investigate")}
-            className="hidden md:inline-flex items-center gap-1.5 uppercase text-xs tracking-widest font-medium px-6 py-3 rounded-lg cursor-pointer transition-all duration-200 active:scale-[0.97]"
-            style={{
-              background: "hsl(240,12%,14%)",
-              color: "rgba(255,255,255,0.85)",
-              border: "1px solid rgba(255,255,255,0.08)",
-            }}
-            onMouseEnter={e => (e.currentTarget.style.background = "hsl(240,12%,18%)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "hsl(240,12%,14%)")}
-          >
-            Check a listing
-            <ArrowRight size={13} strokeWidth={2.4} />
-          </button>
+          {/* Desktop right cluster: theme toggle + CTA */}
+          <div className="hidden md:flex items-center gap-3">
+            <ThemeToggle />
+            <button
+              onClick={() => go("/investigate")}
+              className="inline-flex items-center gap-1.5 uppercase text-xs tracking-widest font-medium px-6 py-3 rounded-lg cursor-pointer transition-all duration-200 active:scale-[0.97]"
+              style={{
+                background: "var(--tg-surface-3)",
+                color: "var(--tg-text)",
+                border: "1px solid var(--tg-border-strong)",
+              }}
+              onMouseEnter={e => (e.currentTarget.style.background = "var(--tg-hover)")}
+              onMouseLeave={e => (e.currentTarget.style.background = "var(--tg-surface-3)")}
+            >
+              Check a listing
+              <ArrowRight size={13} strokeWidth={2.4} />
+            </button>
+          </div>
 
-          {/* Mobile menu toggle */}
-          <button
-            onClick={() => setOpen(o => !o)}
-            aria-label={open ? "Close menu" : "Open menu"}
-            aria-expanded={open}
-            className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded-lg cursor-pointer"
-            style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.85)" }}
-          >
-            {open ? <X size={18} /> : <Menu size={18} />}
-          </button>
+          {/* Mobile cluster: theme toggle + menu toggle */}
+          <div className="md:hidden flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              onClick={() => setOpen(o => !o)}
+              aria-label={open ? "Close menu" : "Open menu"}
+              aria-expanded={open}
+              className="inline-flex items-center justify-center w-10 h-10 rounded-lg cursor-pointer"
+              style={{ background: "var(--tg-hover)", border: "1px solid var(--tg-border-strong)", color: "var(--tg-text)" }}
+            >
+              {open ? <X size={18} /> : <Menu size={18} />}
+            </button>
+          </div>
         </div>
 
         {/* Scroll progress bar */}
@@ -154,7 +166,7 @@ function Navbar() {
           className="origin-left h-px"
           style={{
             scaleX: reduced ? 0 : progress,
-            background: "linear-gradient(90deg, hsl(160,84%,52%), hsl(190,80%,52%))",
+            background: "linear-gradient(90deg, var(--tg-accent), var(--tg-info))",
             opacity: scrolled ? 1 : 0,
           }}
         />
@@ -173,10 +185,11 @@ function Navbar() {
             <div
               className="rounded-2xl p-4"
               style={{
-                background: "hsla(240,20%,6%,0.96)",
+                background: "var(--tg-glass-bg-solid)",
                 backdropFilter: "blur(12px)",
-                border: "1px solid rgba(255,255,255,0.08)",
-                boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
+                WebkitBackdropFilter: "blur(12px)",
+                border: "1px solid var(--tg-glass-border)",
+                boxShadow: "var(--tg-shadow-lg)",
               }}
             >
               <div className="flex flex-col">
@@ -186,7 +199,7 @@ function Navbar() {
                     href={link.href}
                     onClick={() => setOpen(false)}
                     className="text-sm uppercase tracking-widest py-3 px-2 rounded-lg transition-colors"
-                    style={{ color: isActive(link.href) ? "hsl(160,84%,62%)" : "rgba(255,255,255,0.65)" }}
+                    style={{ color: isActive(link.href) ? "var(--tg-accent)" : "var(--tg-text-2)" }}
                   >
                     {link.label}
                   </a>
@@ -195,9 +208,9 @@ function Navbar() {
                   onClick={() => go("/investigate")}
                   className="mt-2 inline-flex items-center justify-center gap-1.5 uppercase text-xs tracking-widest font-semibold px-6 py-3.5 rounded-xl cursor-pointer active:scale-[0.98] transition-transform"
                   style={{
-                    background: "linear-gradient(180deg, hsl(160,84%,42%), hsl(168,80%,34%))",
-                    color: "white",
-                    boxShadow: "0 8px 24px rgba(16,185,129,0.28)",
+                    background: "linear-gradient(180deg, var(--tg-accent), var(--tg-accent-2))",
+                    color: "var(--tg-on-accent)",
+                    boxShadow: "0 8px 24px var(--tg-accent-glow)",
                   }}
                 >
                   Check a listing

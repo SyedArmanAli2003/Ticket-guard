@@ -2,41 +2,238 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   TicketGuard — semantic design tokens (light + dark).
+
+   Every theme-dependent colour in the app resolves to one of these CSS vars, so
+   a single class swap on <html> (managed by next-themes, class strategy) flips
+   the entire UI with no flash and no per-component branching.
+
+   • DARK  lives under :root  (the original premium look — unchanged in spirit)
+   • LIGHT lives under .light (vivid, crisp, high-contrast — not gray mush)
+
+   Token groups:
+     --tg-bg / surface / surface-2 ........ page + card backgrounds
+     --tg-border .......................... hairline separators
+     --tg-text / text-2 / text-3 .......... primary / secondary / tertiary text
+     --tg-accent (+ -2, -contrast, -soft) . brand emerald/teal
+     --tg-violet .......................... secondary brand accent
+     --tg-info / -green ................... pipeline (vector=cyan, mongodb=green)
+     --tg-risk-high/med/low (+ soft) ...... risk-signal palette
+     --tg-glass-bg / -border .............. glassmorphism (navbar, badges)
+     --tg-shadow / -shadow-lg ............. layered elevation
+   ───────────────────────────────────────────────────────────────────────────── */
+:root {
+  color-scheme: dark;
+
+  /* surfaces */
+  --tg-bg: hsl(240, 28%, 3.5%);
+  --tg-bg-rgb: 8, 8, 13;
+  --tg-surface: hsl(240, 15%, 8%);
+  --tg-surface-2: hsl(240, 15%, 11%);
+  --tg-surface-3: hsl(240, 12%, 14%);        /* raised controls (nav CTA) */
+  --tg-border: rgba(255, 255, 255, 0.07);
+  --tg-border-strong: rgba(255, 255, 255, 0.12);
+  --tg-hover: rgba(255, 255, 255, 0.05);
+
+  /* text */
+  --tg-text: rgba(255, 255, 255, 0.92);
+  --tg-text-2: rgba(255, 255, 255, 0.62);
+  --tg-text-3: rgba(255, 255, 255, 0.40);
+  --tg-text-faint: rgba(255, 255, 255, 0.26);
+
+  /* brand */
+  --tg-accent: hsl(160, 84%, 46%);
+  --tg-accent-2: hsl(168, 80%, 38%);
+  --tg-accent-bright: hsl(150, 85%, 62%);
+  --tg-accent-soft-text: hsl(160, 70%, 72%);
+  --tg-accent-contrast: #04110d;             /* text on a solid accent fill */
+  --tg-accent-tint: rgba(16, 185, 129, 0.10);
+  --tg-accent-tint-2: rgba(16, 185, 129, 0.14);
+  --tg-accent-border: rgba(16, 185, 129, 0.28);
+  --tg-accent-glow: rgba(16, 185, 129, 0.32);
+  --tg-on-accent: #ffffff;                   /* text on the gradient button */
+
+  --tg-violet: hsl(258, 80%, 78%);
+  --tg-violet-strong: #7c3aed;
+  --tg-violet-tint: rgba(124, 58, 237, 0.12);
+  --tg-violet-border: rgba(124, 58, 237, 0.25);
+
+  /* hero headline gradient (brand identity, vivid on dark) */
+  --tg-hero-gradient: linear-gradient(110deg, #6ee7b7 0%, #10b981 45%, #2dd4bf 100%);
+
+  /* pipeline source accents */
+  --tg-info: rgb(125, 211, 252);             /* vector / cyan */
+  --tg-info-tint: rgba(14, 165, 233, 0.10);
+  --tg-info-border: rgba(14, 165, 233, 0.25);
+  --tg-green: rgb(74, 222, 128);             /* mongodb / green */
+  --tg-green-2: rgb(134, 239, 172);
+  --tg-green-tint: rgba(34, 197, 94, 0.12);
+  --tg-green-border: rgba(34, 197, 94, 0.25);
+
+  /* risk-signal palette */
+  --tg-risk-high: rgb(248, 113, 113);
+  --tg-risk-high-soft: rgba(239, 68, 68, 0.10);
+  --tg-risk-high-border: rgba(239, 68, 68, 0.45);
+  --tg-risk-high-glow: rgba(239, 68, 68, 0.22);
+  --tg-risk-med: rgb(250, 204, 21);
+  --tg-risk-med-soft: rgba(234, 179, 8, 0.10);
+  --tg-risk-med-border: rgba(234, 179, 8, 0.45);
+  --tg-risk-med-glow: rgba(234, 179, 8, 0.20);
+  --tg-risk-low: rgb(74, 222, 128);
+  --tg-risk-low-soft: rgba(34, 197, 94, 0.10);
+  --tg-risk-low-border: rgba(34, 197, 94, 0.45);
+  --tg-risk-low-glow: rgba(34, 197, 94, 0.20);
+
+  /* warning / demo (amber) */
+  --tg-warn: rgb(250, 204, 21);
+  --tg-warn-tint: rgba(234, 179, 8, 0.12);
+  --tg-warn-border: rgba(234, 179, 8, 0.30);
+
+  /* glass + elevation */
+  --tg-glass-bg: hsla(240, 28%, 4%, 0.72);
+  --tg-glass-bg-solid: hsla(240, 20%, 6%, 0.96);
+  --tg-glass-border: rgba(255, 255, 255, 0.07);
+  --tg-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --tg-shadow-lg: 0 20px 50px rgba(0, 0, 0, 0.5);
+
+  /* code surface */
+  --tg-code-bg: hsl(240, 18%, 5%);
+  --tg-code-border: rgba(255, 255, 255, 0.06);
+
+  /* animated-background tuning (used by .bg-* layers) */
+  --tg-grid-line: rgba(255, 255, 255, 0.04);
+  --tg-aurora-opacity: 1;
+  --tg-grain-opacity: 0.045;
+  --tg-vignette: linear-gradient(to bottom, transparent 55%, hsl(240, 28%, 3.5%) 100%);
+  --tg-track: rgba(255, 255, 255, 0.08);     /* gauge / progress tracks */
+  --tg-track-2: rgba(255, 255, 255, 0.07);
+}
+
+/* ── LIGHT THEME ─────────────────────────────────────────────────────────────
+   Vivid and crisp: near-white surfaces on a cool off-white canvas, deep slate
+   text (WCAG-AA on white), saturated brand emerald + violet, real layered
+   shadows. Risk colours shift one notch darker so they stay legible on light. */
+.light {
+  color-scheme: light;
+
+  --tg-bg: #F6F7F9;
+  --tg-bg-rgb: 246, 247, 249;
+  --tg-surface: #FFFFFF;
+  --tg-surface-2: #F1F3F5;
+  --tg-surface-3: #E9ECEF;
+  --tg-border: rgba(15, 23, 42, 0.08);
+  --tg-border-strong: rgba(15, 23, 42, 0.16);
+  --tg-hover: rgba(15, 23, 42, 0.04);
+
+  --tg-text: #0F172A;
+  --tg-text-2: #475569;
+  --tg-text-3: #64748B;
+  --tg-text-faint: #94A3B8;
+
+  --tg-accent: #0D9488;
+  --tg-accent-2: #0F766E;
+  --tg-accent-bright: #059669;
+  --tg-accent-soft-text: #0F766E;
+  --tg-accent-contrast: #ffffff;
+  --tg-accent-tint: rgba(13, 148, 136, 0.10);
+  --tg-accent-tint-2: rgba(13, 148, 136, 0.16);
+  --tg-accent-border: rgba(13, 148, 136, 0.32);
+  --tg-accent-glow: rgba(13, 148, 136, 0.28);
+  --tg-on-accent: #ffffff;
+
+  --tg-violet: #7C3AED;
+  --tg-violet-strong: #6D28D9;
+  --tg-violet-tint: rgba(124, 58, 237, 0.10);
+  --tg-violet-border: rgba(124, 58, 237, 0.28);
+
+  /* hero headline gradient — deeper, saturated greens so it pops on off-white */
+  --tg-hero-gradient: linear-gradient(110deg, #059669 0%, #0D9488 50%, #0891B2 100%);
+
+  --tg-info: #0284C7;                          /* darker cyan for contrast */
+  --tg-info-tint: rgba(2, 132, 199, 0.10);
+  --tg-info-border: rgba(2, 132, 199, 0.30);
+  --tg-green: #16A34A;
+  --tg-green-2: #15803D;
+  --tg-green-tint: rgba(22, 163, 74, 0.12);
+  --tg-green-border: rgba(22, 163, 74, 0.30);
+
+  --tg-risk-high: #DC2626;
+  --tg-risk-high-soft: rgba(220, 38, 38, 0.08);
+  --tg-risk-high-border: rgba(220, 38, 38, 0.40);
+  --tg-risk-high-glow: rgba(220, 38, 38, 0.16);
+  --tg-risk-med: #D97706;
+  --tg-risk-med-soft: rgba(217, 119, 6, 0.10);
+  --tg-risk-med-border: rgba(217, 119, 6, 0.40);
+  --tg-risk-med-glow: rgba(217, 119, 6, 0.16);
+  --tg-risk-low: #16A34A;
+  --tg-risk-low-soft: rgba(22, 163, 74, 0.10);
+  --tg-risk-low-border: rgba(22, 163, 74, 0.40);
+  --tg-risk-low-glow: rgba(22, 163, 74, 0.16);
+
+  --tg-warn: #B45309;
+  --tg-warn-tint: rgba(217, 119, 6, 0.12);
+  --tg-warn-border: rgba(217, 119, 6, 0.35);
+
+  --tg-glass-bg: rgba(255, 255, 255, 0.72);
+  --tg-glass-bg-solid: rgba(255, 255, 255, 0.96);
+  --tg-glass-border: rgba(15, 23, 42, 0.08);
+  --tg-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
+  --tg-shadow-lg: 0 10px 30px rgba(15, 23, 42, 0.10);
+
+  --tg-code-bg: #0F172A;                        /* keep code blocks dark for contrast */
+  --tg-code-border: rgba(15, 23, 42, 0.10);
+
+  --tg-grid-line: rgba(15, 23, 42, 0.045);
+  --tg-aurora-opacity: 0.55;
+  --tg-grain-opacity: 0.025;
+  --tg-vignette: linear-gradient(to bottom, transparent 60%, rgba(241, 243, 245, 0.9) 100%);
+  --tg-track: rgba(15, 23, 42, 0.10);
+  --tg-track-2: rgba(15, 23, 42, 0.08);
+}
+
+/* ── Base reset ──────────────────────────────────────────────────────────────
+   NOTE: do NOT set height:100% on html/body — that forces the <body> to become
+   the scroll container, which stops window.scrollY from ever changing (the nav
+   then never gets its solid background and overlaps page content). We let the
+   document be the natural scroll root and use min-height instead. */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; overflow-x: hidden; }
+html { overflow-x: hidden; scroll-behavior: smooth; }
 body {
-  background: hsl(240,28%,3.5%);
-  color: hsl(0,0%,96%);
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background: var(--tg-bg);
+  color: var(--tg-text);
   font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Headings + technical chrome use the display face. */
 h1, h2, h3, .font-display { font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif; }
 
 /* ── Premium thin scrollbar (replaces the chunky default) ───────────────── */
-* { scrollbar-width: thin; scrollbar-color: rgba(16,185,129,0.30) transparent; }
+* { scrollbar-width: thin; scrollbar-color: var(--tg-accent-border) transparent; }
 ::-webkit-scrollbar { width: 7px; height: 7px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(hsl(160,84%,46%), hsl(170,80%,38%));
+  background: linear-gradient(var(--tg-accent), var(--tg-accent-2));
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: content-box;
 }
-::-webkit-scrollbar-thumb:hover { background-color: hsl(160,85%,56%); }
+::-webkit-scrollbar-thumb:hover { background-color: var(--tg-accent-bright); }
 /* Pages that should never show a bar (the hero fits the viewport) */
 .no-scrollbar { scrollbar-width: none; }
 .no-scrollbar::-webkit-scrollbar { display: none; }
-html { scroll-behavior: smooth; }
 
 /* Selection */
-::selection { background: rgba(16,185,129,0.28); color: #eafff6; }
+::selection { background: var(--tg-accent-tint-2); color: var(--tg-text); }
 
 /* Crisp focus ring for keyboard users (a11y) */
 :focus-visible {
-  outline: 2px solid hsl(160,84%,52%);
+  outline: 2px solid var(--tg-accent);
   outline-offset: 2px;
   border-radius: 8px;
 }
@@ -71,8 +268,8 @@ html { scroll-behavior: smooth; }
 
 /* Fresh feed item ring that fades after entry */
 @keyframes freshRing {
-  0%   { background: rgba(16,185,129,0.14); border-color: rgba(16,185,129,0.6); }
-  100% { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.07); }
+  0%   { background: var(--tg-accent-tint-2); border-color: var(--tg-accent-border); }
+  100% { background: var(--tg-surface-2); border-color: var(--tg-border); }
 }
 .fresh-ring { animation: freshRing 2.4s ease-out forwards; }
 
@@ -97,7 +294,7 @@ html { scroll-behavior: smooth; }
 }
 .scan-shimmer::after {
   content: ""; position: absolute; top: 0; bottom: 0; width: 45%;
-  background: linear-gradient(100deg, transparent, rgba(16,185,129,0.14), transparent);
+  background: linear-gradient(100deg, transparent, var(--tg-accent-tint-2), transparent);
   animation: scanSweep 1.6s cubic-bezier(0.4,0,0.2,1) infinite;
   will-change: transform;
 }
@@ -116,7 +313,7 @@ html { scroll-behavior: smooth; }
 @keyframes skeletonSweep { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
 .skeleton-shimmer::after {
   content: ""; position: absolute; inset: 0;
-  background: linear-gradient(100deg, transparent, rgba(255,255,255,0.07), transparent);
+  background: linear-gradient(100deg, transparent, var(--tg-hover), transparent);
   animation: skeletonSweep 1.4s ease-in-out infinite;
   will-change: transform;
 }
@@ -140,7 +337,7 @@ html { scroll-behavior: smooth; }
   50%     { transform: translate3d(-5%,7%,0)  scale(1.28); }
 }
 
-.bg-aurora { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.bg-aurora { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; opacity: var(--tg-aurora-opacity); }
 .bg-aurora .blob { position: absolute; border-radius: 50%; filter: blur(80px); opacity: 0.5; will-change: transform; }
 .bg-aurora .b1 { width: 46vw; height: 46vw; left: -8vw;  top: -10vw;
   background: radial-gradient(circle at 30% 30%, #7c3aed, transparent 70%); animation: auroraA 22s ease-in-out infinite; }
@@ -157,6 +354,17 @@ html { scroll-behavior: smooth; }
 .bg-aurora.teal .b3 { background: radial-gradient(circle at 50% 50%, #0d9488, transparent 70%); opacity: 0.30; }
 .bg-aurora.teal .b4 { background: radial-gradient(circle at 50% 50%, #22d3ee, transparent 70%); opacity: 0.20; }
 
+/* Light theme: keep the mesh colourful but dial blobs so they read as soft tints
+   on the off-white canvas rather than muddy washes. */
+.light .bg-aurora .blob { filter: blur(90px); opacity: 0.4; }
+.light .bg-aurora .b1 { background: radial-gradient(circle at 30% 30%, #a78bfa, transparent 70%); }
+.light .bg-aurora .b2 { background: radial-gradient(circle at 50% 50%, #818cf8, transparent 70%); }
+.light .bg-aurora .b3 { background: radial-gradient(circle at 50% 50%, #67e8f9, transparent 70%); opacity: 0.28; }
+.light .bg-aurora.teal .b1 { background: radial-gradient(circle at 30% 30%, #5eead4, transparent 70%); opacity: 0.5; }
+.light .bg-aurora.teal .b2 { background: radial-gradient(circle at 50% 50%, #c4b5fd, transparent 70%); opacity: 0.45; }
+.light .bg-aurora.teal .b3 { background: radial-gradient(circle at 50% 50%, #5eead4, transparent 70%); opacity: 0.3; }
+.light .bg-aurora.teal .b4 { background: radial-gradient(circle at 50% 50%, #67e8f9, transparent 70%); opacity: 0.22; }
+
 /* Fine technical grid, faded toward edges. Slowly drifts diagonally. */
 @keyframes gridDrift {
   from { background-position: 0 0, 0 0; }
@@ -164,8 +372,8 @@ html { scroll-behavior: smooth; }
 }
 .bg-grid { position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background-image:
-    linear-gradient(rgba(255,255,255,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255,255,255,0.04) 1px, transparent 1px);
+    linear-gradient(var(--tg-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--tg-grid-line) 1px, transparent 1px);
   background-size: 64px 64px, 64px 64px;
   -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 35%, #000 30%, transparent 78%);
           mask-image: radial-gradient(ellipse 80% 60% at 50% 35%, #000 30%, transparent 78%);
@@ -173,13 +381,13 @@ html { scroll-behavior: smooth; }
   will-change: background-position;
 }
 /* Subtle film grain for a premium, non-flat finish */
-.bg-grain { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: 0.045; mix-blend-mode: overlay;
+.bg-grain { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: var(--tg-grain-opacity); mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
 /* Top + bottom vignette for depth */
 .bg-vignette { position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background:
-    radial-gradient(120% 80% at 50% -10%, rgba(16,185,129,0.10), transparent 60%),
-    linear-gradient(to bottom, transparent 55%, hsl(240,28%,3.5%) 100%); }
+    radial-gradient(120% 80% at 50% -10%, var(--tg-accent-tint), transparent 60%),
+    var(--tg-vignette); }
 
 /* ── Reduced motion: fully disable heavy / continuous animation ──────────── */
 @media (prefers-reduced-motion: reduce) {
@@ -189,6 +397,7 @@ html { scroll-behavior: smooth; }
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
   }
+  html { scroll-behavior: auto !important; }
   .bg-aurora .blob,
   .bg-grid { animation: none !important; }
   .scan-shimmer::after { animation: none !important; opacity: 0; }

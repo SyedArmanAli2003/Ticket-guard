@@ -16,10 +16,10 @@ import {
 type ToolKey = AgentStep["tool"]
 
 const TOOL_BADGE: Record<ToolKey, { label: string; bg: string; color: string; border: string }> = {
-  gemini:  { label: "GEMINI",  bg: "rgba(124,58,237,0.12)", color: "hsl(258,80%,78%)",  border: "rgba(124,58,237,0.25)" },
-  mongodb: { label: "MONGODB", bg: "rgba(34,197,94,0.12)",  color: "rgb(74,222,128)",   border: "rgba(34,197,94,0.25)"  },
-  vector:  { label: "VECTOR",  bg: "rgba(14,165,233,0.1)",  color: "rgb(125,211,252)",  border: "rgba(14,165,233,0.25)" },
-  system:  { label: "SYSTEM",  bg: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)", border: "rgba(255,255,255,0.12)" },
+  gemini:  { label: "GEMINI",  bg: "var(--tg-violet-tint)", color: "var(--tg-violet)",  border: "var(--tg-violet-border)" },
+  mongodb: { label: "MONGODB", bg: "var(--tg-green-tint)",  color: "var(--tg-green)",   border: "var(--tg-green-border)"  },
+  vector:  { label: "VECTOR",  bg: "var(--tg-info-tint)",   color: "var(--tg-info)",    border: "var(--tg-info-border)" },
+  system:  { label: "SYSTEM",  bg: "var(--tg-hover)",       color: "var(--tg-text-3)",  border: "var(--tg-border-strong)" },
 }
 
 // Short worker label per step (mirrors StepCard's "specialist" line)
@@ -60,24 +60,24 @@ function StepRing({
   const circ = 2 * Math.PI * r
   const pct = stepNumber / total
   const ringColor =
-    status === "complete" ? "rgb(74,222,128)" :
-    status === "running"  ? "hsl(160,84%,55%)" :
-    status === "error"    ? "rgb(248,113,113)" :
-    status === "not_configured" ? "rgba(255,255,255,0.28)" :
-                            "rgba(255,255,255,0.25)"
+    status === "complete" ? "var(--tg-green)" :
+    status === "running"  ? "var(--tg-accent)" :
+    status === "error"    ? "var(--tg-risk-high)" :
+    status === "not_configured" ? "var(--tg-text-3)" :
+                            "var(--tg-text-3)"
   const fill = {
-    waiting:  { background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.4)" },
-    running:  { background: "rgba(16,185,129,0.18)",  color: "hsl(160,84%,72%)" },
-    complete: { background: "rgba(34,197,94,0.14)",   color: "rgb(74,222,128)" },
-    error:    { background: "rgba(239,68,68,0.15)",   color: "rgb(252,165,165)" },
-    not_configured: { background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" },
+    waiting:  { background: "var(--tg-track)",      color: "var(--tg-text-3)" },
+    running:  { background: "var(--tg-accent-tint-2)", color: "var(--tg-accent)" },
+    complete: { background: "var(--tg-green-tint)", color: "var(--tg-green)" },
+    error:    { background: "var(--tg-risk-high-soft)", color: "var(--tg-risk-high)" },
+    not_configured: { background: "var(--tg-hover)", color: "var(--tg-text-3)" },
   }[status]
 
   return (
     <div className="relative flex-shrink-0" style={{ width: size, height: size }}>
       <svg width={size} height={size} style={{ position: "absolute", inset: 0, transform: "rotate(-90deg)" }} aria-hidden>
         {/* track */}
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--tg-track)" strokeWidth={stroke} />
         {/* progress arc */}
         <motion.circle
           cx={size / 2}
@@ -91,7 +91,7 @@ function StepRing({
           initial={{ strokeDashoffset: reduced ? circ * (1 - pct) : circ }}
           animate={{ strokeDashoffset: circ * (1 - pct) }}
           transition={{ duration: reduced ? 0 : 0.7, ease: EASE_OUT }}
-          style={{ filter: status === "running" ? "drop-shadow(0 0 4px rgba(16,185,129,0.55))" : "none" }}
+          style={{ filter: status === "running" ? "drop-shadow(0 0 4px var(--tg-accent-glow))" : "none" }}
         />
       </svg>
       <div
@@ -111,10 +111,10 @@ function StepRing({
 }
 
 const SOURCE_META = {
-  vector:  { label: "Atlas Vector Search", color: "rgb(125,211,252)", Icon: Search },
-  mongodb: { label: "MongoDB MCP",         color: "rgb(74,222,128)",  Icon: Leaf },
-  gemini:  { label: "Gemini 2.5",          color: "hsl(258,80%,80%)", Icon: Sparkles },
-  system:  { label: "rule engine",         color: "rgba(255,255,255,0.55)", Icon: Settings2 },
+  vector:  { label: "Atlas Vector Search", color: "var(--tg-info)", Icon: Search },
+  mongodb: { label: "MongoDB MCP",         color: "var(--tg-green)",  Icon: Leaf },
+  gemini:  { label: "Gemini 2.5",          color: "var(--tg-violet)", Icon: Sparkles },
+  system:  { label: "rule engine",         color: "var(--tg-text-2)", Icon: Settings2 },
 } as const
 
 // Tool-call chips that slide + fade in (staggered) while/after a step runs.
@@ -140,11 +140,11 @@ function ActivityFeed({
             key={i}
             variants={chipSlideIn}
             className="inline-flex items-center gap-2 text-xs rounded-md px-2 py-1 mr-1.5"
-            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+            style={{ background: "var(--tg-surface-2)", border: "1px solid var(--tg-border)" }}
           >
             <Icon size={12} style={{ color: meta.color }} strokeWidth={2.2} />
             <span style={{ color: meta.color }}>{meta.label}</span>
-            <code style={{ color: "rgba(255,255,255,0.45)" }}>{a.tool}{a.preview ? `("${a.preview}")` : "()"}</code>
+            <code style={{ color: "var(--tg-text-3)" }}>{a.tool}{a.preview ? `("${a.preview}")` : "()"}</code>
           </motion.div>
         )
       })}
@@ -160,11 +160,11 @@ function InvestigationStep({ step, total }: { step: AgentStep; total: number }) 
   const isReal = step.kind === "real"
 
   const borderColor = {
-    waiting:  "rgba(255,255,255,0.06)",
-    running:  "rgba(16,185,129,0.5)",
-    complete: "rgba(34,197,94,0.4)",
-    error:    "rgba(239,68,68,0.4)",
-    not_configured: "rgba(255,255,255,0.1)",
+    waiting:  "var(--tg-border)",
+    running:  "var(--tg-accent-border)",
+    complete: "var(--tg-green-border)",
+    error:    "var(--tg-risk-high-border)",
+    not_configured: "var(--tg-border-strong)",
   }[status]
 
   return (
@@ -175,10 +175,10 @@ function InvestigationStep({ step, total }: { step: AgentStep; total: number }) 
       layout={!reduced}
       className="relative w-full rounded-2xl p-5 mb-3 overflow-hidden transition-colors duration-300"
       style={{
-        background: "hsl(240,15%,8%)",
+        background: "var(--tg-surface)",
         border: `1px solid ${borderColor}`,
-        opacity: status === "waiting" ? 0.55 : 1,
-        boxShadow: status === "running" ? "0 0 20px rgba(16,185,129,0.12)" : "none",
+        opacity: status === "waiting" ? 0.6 : 1,
+        boxShadow: status === "running" ? "var(--tg-shadow), 0 0 20px var(--tg-accent-tint-2)" : "var(--tg-shadow)",
       }}
     >
       {/* scanning shimmer sweep while running (gated in CSS by reduced-motion) */}
@@ -188,25 +188,25 @@ function InvestigationStep({ step, total }: { step: AgentStep; total: number }) 
         <div className="flex items-center gap-3">
           <StepRing stepNumber={stepNumber} total={total} status={status} reduced={reduced} />
           <div>
-            <p className="text-sm font-medium text-white">{name}</p>
+            <p className="text-sm font-medium" style={{ color: "var(--tg-text)" }}>{name}</p>
             {status === "running" && (
-              <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "hsl(160,72%,68%)" }}>
+              <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "var(--tg-accent)" }}>
                 <Loader2 size={11} className={reduced ? "" : "animate-spin"} strokeWidth={2.4} />
                 {workerLabel} is working…
               </p>
             )}
             {status === "complete" && duration && (
-              <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "rgba(74,222,128,0.85)" }}>
+              <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "var(--tg-green)" }}>
                 <Check size={11} strokeWidth={3} /> {workerLabel} · done in {duration}
               </p>
             )}
             {status === "not_configured" && (
-              <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "rgba(255,255,255,0.45)" }}>
+              <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "var(--tg-text-3)" }}>
                 <MinusCircle size={11} strokeWidth={2.2} /> {workerLabel} · not configured
               </p>
             )}
             {status === "error" && (
-              <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "rgb(252,165,165)" }}>
+              <p className="text-xs mt-0.5 flex items-center gap-1" style={{ color: "var(--tg-risk-high)" }}>
                 {workerLabel} · failed
               </p>
             )}
@@ -217,18 +217,18 @@ function InvestigationStep({ step, total }: { step: AgentStep; total: number }) 
           {status !== "waiting" && <ToolBadge tool={step.tool} />}
           {status === "running" && (
             <div className={`w-4 h-4 rounded-full border-2 ${reduced ? "" : "animate-spin"}`}
-              style={{ borderColor: "hsl(160,84%,46%)", borderTopColor: "transparent" }} />
+              style={{ borderColor: "var(--tg-accent)", borderTopColor: "transparent" }} />
           )}
-          {status === "complete" && <span className="text-xs" style={{ color: "rgb(74,222,128)" }}>Done</span>}
+          {status === "complete" && <span className="text-xs" style={{ color: "var(--tg-green)" }}>Done</span>}
           {status === "not_configured" && (
             <span
               className="text-xs px-2 py-0.5 rounded-full"
-              style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.12)" }}
+              style={{ background: "var(--tg-hover)", color: "var(--tg-text-3)", border: "1px solid var(--tg-border-strong)" }}
             >
               not configured
             </span>
           )}
-          {status === "error" && <span className="text-xs text-red-400">Failed</span>}
+          {status === "error" && <span className="text-xs" style={{ color: "var(--tg-risk-high)" }}>Failed</span>}
         </div>
       </div>
 
@@ -240,7 +240,7 @@ function InvestigationStep({ step, total }: { step: AgentStep; total: number }) 
 
       {/* honest reason line for a not_configured / error step (real mode) */}
       {(status === "not_configured" || status === "error") && (step.reason || isReal) && (
-        <p className="relative text-xs mt-3" style={{ color: "rgba(255,255,255,0.42)", lineHeight: 1.5 }}>
+        <p className="relative text-xs mt-3" style={{ color: "var(--tg-text-3)", lineHeight: 1.5 }}>
           {step.reason
             ? step.reason
             : status === "not_configured"
@@ -251,7 +251,7 @@ function InvestigationStep({ step, total }: { step: AgentStep; total: number }) 
 
       <div className={`step-content ${(status === "complete" || status === "not_configured") && data ? "open" : ""}`}>
         {(status === "complete" || status === "not_configured") && data && (
-          <div className="mt-4 pt-4" style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          <div className="mt-4 pt-4" style={{ borderTop: "1px solid var(--tg-border)" }}>
             {isReal ? (
               <RealStepData stepNumber={stepNumber} status={status} data={data} reduced={reduced} />
             ) : (
@@ -263,6 +263,13 @@ function InvestigationStep({ step, total }: { step: AgentStep; total: number }) 
     </motion.div>
   )
 }
+
+// Risk band → semantic CSS var (single source of truth for step-level colours).
+function riskColorVar(level: string): string {
+  return level === "HIGH" ? "var(--tg-risk-high)" : level === "MEDIUM" ? "var(--tg-risk-med)" : "var(--tg-risk-low)"
+}
+// Translucent fills/borders derived from a CSS-var colour (theme-safe).
+const tint = (c: string, pct: number) => `color-mix(in srgb, ${c} ${pct}%, transparent)`
 
 function StepData({ stepNumber, data, reduced }: { stepNumber: number; data: Record<string, unknown>; reduced: boolean }) {
   // Step 1 — extracted entity chips (stagger in)
@@ -281,13 +288,13 @@ function StepData({ stepNumber, data, reduced }: { stepNumber: number; data: Rec
             variants={chipSlideIn}
             className="text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"
             style={{
-              background: e.flagged ? "rgba(239,68,68,0.1)" : "rgba(34,197,94,0.1)",
-              color: e.flagged ? "rgb(252,165,165)" : "rgb(134,239,172)",
-              border: `1px solid ${e.flagged ? "rgba(239,68,68,0.25)" : "rgba(34,197,94,0.22)"}`,
+              background: e.flagged ? "var(--tg-risk-high-soft)" : "var(--tg-green-tint)",
+              color: e.flagged ? "var(--tg-risk-high)" : "var(--tg-green)",
+              border: `1px solid ${e.flagged ? "var(--tg-risk-high-border)" : "var(--tg-green-border)"}`,
             }}
           >
             <span style={{ opacity: 0.7 }}>{e.flagged ? "⚠" : "✓"}</span>
-            <span style={{ color: "rgba(255,255,255,0.5)" }}>{e.kind}:</span>
+            <span style={{ color: "var(--tg-text-3)" }}>{e.kind}:</span>
             <span className="font-medium">{e.value}</span>
           </motion.span>
         ))}
@@ -301,13 +308,13 @@ function StepData({ stepNumber, data, reduced }: { stepNumber: number; data: Rec
     return (
       <div>
         <div className="flex flex-wrap gap-2 mb-3">
-          <span className="text-xs px-2 py-0.5 rounded-md" style={{ background: "rgba(14,165,233,0.1)", color: "rgb(125,211,252)", border: "1px solid rgba(14,165,233,0.22)" }}>
+          <span className="text-xs px-2 py-0.5 rounded-md" style={{ background: "var(--tg-info-tint)", color: "var(--tg-info)", border: "1px solid var(--tg-info-border)" }}>
             $vectorSearch · knnBeta
           </span>
-          <span className="text-xs px-2 py-0.5 rounded-md" style={{ background: "rgba(34,197,94,0.1)", color: "rgb(74,222,128)", border: "1px solid rgba(34,197,94,0.22)" }}>
+          <span className="text-xs px-2 py-0.5 rounded-md" style={{ background: "var(--tg-green-tint)", color: "var(--tg-green)", border: "1px solid var(--tg-green-border)" }}>
             $search · text
           </span>
-          <span className="text-xs px-2 py-0.5 rounded-md" style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}>
+          <span className="text-xs px-2 py-0.5 rounded-md" style={{ background: "var(--tg-hover)", color: "var(--tg-text-3)", border: "1px solid var(--tg-border-strong)" }}>
             $unionWith · rank fusion
           </span>
         </div>
@@ -322,17 +329,17 @@ function StepData({ stepNumber, data, reduced }: { stepNumber: number; data: Rec
               key={i}
               variants={cardRise}
               className="rounded-xl p-3 flex items-center justify-between gap-3"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+              style={{ background: "var(--tg-surface-2)", border: "1px solid var(--tg-border)" }}
             >
               <div className="min-w-0">
-                <p className="text-xs font-medium text-white truncate">{m.label}</p>
-                <p className="text-xs mt-0.5 italic truncate" style={{ color: "rgba(255,255,255,0.45)" }}>{m.excerpt}</p>
+                <p className="text-xs font-medium truncate" style={{ color: "var(--tg-text)" }}>{m.label}</p>
+                <p className="text-xs mt-0.5 italic truncate" style={{ color: "var(--tg-text-3)" }}>{m.excerpt}</p>
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">
                 <ContributionBars vector={m.vectorScore} text={m.textScore} compact />
                 <div className="text-right" style={{ width: 44 }}>
-                  <p className="text-sm font-bold tabular-nums" style={{ color: "hsl(160,84%,62%)" }}>{m.score.toFixed(2)}</p>
-                  <p style={{ fontSize: "0.55rem", color: "rgba(255,255,255,0.35)" }}>score</p>
+                  <p className="text-sm font-bold tabular-nums" style={{ color: "var(--tg-accent)" }}>{m.score.toFixed(2)}</p>
+                  <p style={{ fontSize: "0.55rem", color: "var(--tg-text-3)" }}>score</p>
                 </div>
               </div>
             </motion.div>
@@ -346,17 +353,17 @@ function StepData({ stepNumber, data, reduced }: { stepNumber: number; data: Rec
   if (stepNumber === 3) {
     const score = (data.riskScore as number) ?? 0
     const level = data.riskLevel as string
-    const color = level === "HIGH" ? "rgb(248,113,113)" : level === "MEDIUM" ? "rgb(250,204,21)" : "rgb(74,222,128)"
+    const color = riskColorVar(level)
     return (
       <div className="flex items-center gap-4">
         <div className="flex items-end gap-1">
           <span className="text-3xl font-bold tabular-nums" style={{ color }}>{score}</span>
-          <span className="text-sm mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>/100</span>
+          <span className="text-sm mb-1" style={{ color: "var(--tg-text-3)" }}>/100</span>
         </div>
-        <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+        <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--tg-track-2)" }}>
           <motion.div
             className="h-full rounded-full"
-            style={{ background: color, boxShadow: `0 0 10px ${color}`, transformOrigin: "left center" }}
+            style={{ background: color, boxShadow: `0 0 10px ${tint(color, 60)}`, transformOrigin: "left center" }}
             initial={{ scaleX: reduced ? 1 : 0 }}
             animate={{ scaleX: 1 }}
             transition={{ duration: reduced ? 0 : 0.7, ease: EASE_OUT }}
@@ -365,7 +372,7 @@ function StepData({ stepNumber, data, reduced }: { stepNumber: number; data: Rec
           </motion.div>
         </div>
         <span className="text-xs px-2 py-0.5 rounded-full font-medium"
-          style={{ background: `${color}22`, color, border: `1px solid ${color}44` }}>
+          style={{ background: tint(color, 13), color, border: `1px solid ${tint(color, 27)}` }}>
           {level}
         </span>
       </div>
@@ -376,14 +383,14 @@ function StepData({ stepNumber, data, reduced }: { stepNumber: number; data: Rec
   if (stepNumber === 4) {
     const rule = data.rule as RuleCheck | undefined
     if (!rule) return null
-    const color = rule.passed ? "rgb(74,222,128)" : "rgb(248,113,113)"
+    const color = rule.passed ? "var(--tg-risk-low)" : "var(--tg-risk-high)"
     return (
       <div className="flex items-start gap-3">
         <span className="text-xs px-2 py-0.5 rounded-full flex-shrink-0 font-medium"
-          style={{ background: `${color}22`, color, border: `1px solid ${color}44` }}>
+          style={{ background: tint(color, 13), color, border: `1px solid ${tint(color, 27)}` }}>
           {rule.passed ? "PASS" : "FAIL"}
         </span>
-        <p className="text-xs" style={{ color: "rgba(255,255,255,0.65)", lineHeight: 1.5 }}>{rule.note}</p>
+        <p className="text-xs" style={{ color: "var(--tg-text-2)", lineHeight: 1.5 }}>{rule.note}</p>
       </div>
     )
   }
@@ -392,9 +399,9 @@ function StepData({ stepNumber, data, reduced }: { stepNumber: number; data: Rec
   if (stepNumber === 5) {
     const rationale = data.rationale as string | undefined
     const level = data.riskLevel as string
-    const color = level === "HIGH" ? "rgb(248,113,113)" : level === "MEDIUM" ? "rgb(250,204,21)" : "rgb(74,222,128)"
+    const color = riskColorVar(level)
     return (
-      <p className="text-sm italic pl-3" style={{ borderLeft: `2px solid ${color}`, color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>
+      <p className="text-sm italic pl-3" style={{ borderLeft: `2px solid ${color}`, color: "var(--tg-text)", lineHeight: 1.5 }}>
         {rationale}
       </p>
     )

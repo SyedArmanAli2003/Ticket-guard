@@ -24,13 +24,13 @@ function Chip({ k, v, flagged }: { k: string; v: string; flagged: boolean }) {
       variants={chipSlideIn}
       className="text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"
       style={{
-        background: flagged ? "rgba(239,68,68,0.1)" : "rgba(34,197,94,0.1)",
-        color: flagged ? "rgb(252,165,165)" : "rgb(134,239,172)",
-        border: `1px solid ${flagged ? "rgba(239,68,68,0.25)" : "rgba(34,197,94,0.22)"}`,
+        background: flagged ? "var(--tg-risk-high-soft)" : "var(--tg-green-tint)",
+        color: flagged ? "var(--tg-risk-high)" : "var(--tg-green)",
+        border: `1px solid ${flagged ? "var(--tg-risk-high-border)" : "var(--tg-green-border)"}`,
       }}
     >
       <span style={{ opacity: 0.7 }}>{flagged ? "⚠" : "✓"}</span>
-      <span style={{ color: "rgba(255,255,255,0.5)" }}>{k}:</span>
+      <span style={{ color: "var(--tg-text-3)" }}>{k}:</span>
       <span className="font-medium">{v}</span>
     </motion.span>
   )
@@ -93,13 +93,13 @@ export default function RealStepData({
     return (
       <div>
         <div className="flex flex-wrap gap-2 mb-3">
-          <span className="text-xs px-2 py-0.5 rounded-md" style={{ background: "rgba(14,165,233,0.1)", color: "rgb(125,211,252)", border: "1px solid rgba(14,165,233,0.22)" }}>
+          <span className="text-xs px-2 py-0.5 rounded-md" style={{ background: "var(--tg-info-tint)", color: "var(--tg-info)", border: "1px solid var(--tg-info-border)" }}>
             $vectorSearch
           </span>
-          <span className="text-xs px-2 py-0.5 rounded-md" style={{ background: "rgba(34,197,94,0.1)", color: "rgb(74,222,128)", border: "1px solid rgba(34,197,94,0.22)" }}>
+          <span className="text-xs px-2 py-0.5 rounded-md" style={{ background: "var(--tg-green-tint)", color: "var(--tg-green)", border: "1px solid var(--tg-green-border)" }}>
             $search · text
           </span>
-          <span className="text-xs px-2 py-0.5 rounded-md" style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", border: "1px solid rgba(255,255,255,0.1)" }}>
+          <span className="text-xs px-2 py-0.5 rounded-md" style={{ background: "var(--tg-hover)", color: "var(--tg-text-3)", border: "1px solid var(--tg-border-strong)" }}>
             {fusion === "native_rankfusion" ? "$rankFusion (native)" : "reciprocal-rank fusion"}
           </span>
         </div>
@@ -108,16 +108,16 @@ export default function RealStepData({
         ) : (
           <motion.div className="space-y-2.5" variants={staggerContainer(0.07)} initial={reduced ? false : "hidden"} animate="show">
             {matches.map((m, i) => (
-              <motion.div key={i} variants={cardRise} className="rounded-xl p-3 flex items-center justify-between gap-3" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}>
+              <motion.div key={i} variants={cardRise} className="rounded-xl p-3 flex items-center justify-between gap-3" style={{ background: "var(--tg-surface-2)", border: "1px solid var(--tg-border)" }}>
                 <div className="min-w-0">
-                  <p className="text-xs font-medium text-white truncate">{m.label}</p>
-                  <p className="text-xs mt-0.5 italic truncate" style={{ color: "rgba(255,255,255,0.45)" }}>{m.excerpt}</p>
+                  <p className="text-xs font-medium truncate" style={{ color: "var(--tg-text)" }}>{m.label}</p>
+                  <p className="text-xs mt-0.5 italic truncate" style={{ color: "var(--tg-text-3)" }}>{m.excerpt}</p>
                 </div>
                 <div className="flex items-center gap-3 flex-shrink-0">
                   <ContributionBars vector={m.vectorScore} text={m.textScore} compact />
                   <div className="text-right" style={{ width: 44 }}>
-                    <p className="text-sm font-bold tabular-nums" style={{ color: "hsl(160,84%,62%)" }}>{m.score.toFixed(2)}</p>
-                    <p style={{ fontSize: "0.55rem", color: "rgba(255,255,255,0.35)" }}>fused</p>
+                    <p className="text-sm font-bold tabular-nums" style={{ color: "var(--tg-accent)" }}>{m.score.toFixed(2)}</p>
+                    <p style={{ fontSize: "0.55rem", color: "var(--tg-text-3)" }}>fused</p>
                   </div>
                 </div>
               </motion.div>
@@ -138,10 +138,10 @@ export default function RealStepData({
       <div className="space-y-3">
         {typo.input ? (
           <div className="flex items-center gap-2 flex-wrap">
-            <Pill color={isSquat ? "rgb(248,113,113)" : isOfficial ? "rgb(74,222,128)" : "rgba(255,255,255,0.5)"}>
+            <Pill color={isSquat ? "var(--tg-risk-high)" : isOfficial ? "var(--tg-risk-low)" : "var(--tg-text-3)"}>
               {isSquat ? "LOOK-ALIKE" : isOfficial ? "OFFICIAL" : "DOMAIN"}
             </Pill>
-            <span className="text-xs" style={{ color: "rgba(255,255,255,0.65)" }}>
+            <span className="text-xs" style={{ color: "var(--tg-text-2)" }}>
               <code>{String(typo.input)}</code>
               {typo.nearest != null && typo.distance != null && (
                 <> · edit-distance {String(typo.distance)} from <code>{String(typo.nearest)}</code></>
@@ -149,10 +149,10 @@ export default function RealStepData({
             </span>
           </div>
         ) : (
-          <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>No domain to check.</p>
+          <p className="text-xs" style={{ color: "var(--tg-text-3)" }}>No domain to check.</p>
         )}
         {prior.status === "ok" ? (
-          <p className="text-xs" style={{ color: "rgba(255,255,255,0.65)" }}>
+          <p className="text-xs" style={{ color: "var(--tg-text-2)" }}>
             {Number(prior.total) > 0
               ? `${prior.total} prior report(s) match this domain/handle.`
               : "No prior reports match this domain/handle."}
@@ -170,22 +170,22 @@ export default function RealStepData({
       return <Note text={`Duplicate lookup not configured: ${String(data.reason || "Atlas unreachable")}.`} />
     }
     if (data.status === "no_reference") {
-      return <p className="text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>No barcode/booking reference was present to check for duplication.</p>
+      return <p className="text-xs" style={{ color: "var(--tg-text-2)" }}>No barcode/booking reference was present to check for duplication.</p>
     }
     const offered = Number(data.offered_to || 0)
     const tamper = data.tamper_hints ? String(data.tamper_hints) : ""
     return (
       <div className="space-y-2">
         <div className="flex items-center gap-2">
-          <Pill color={offered >= 1 ? "rgb(248,113,113)" : "rgb(74,222,128)"}>
+          <Pill color={offered >= 1 ? "var(--tg-risk-high)" : "var(--tg-risk-low)"}>
             {offered >= 1 ? "DUPLICATE" : "UNIQUE"}
           </Pill>
-          <span className="text-xs" style={{ color: "rgba(255,255,255,0.65)" }}>
+          <span className="text-xs" style={{ color: "var(--tg-text-2)" }}>
             {offered >= 1 ? `Barcode/ref already offered to ${offered} buyer(s).` : "Barcode/ref not seen before."}
           </span>
         </div>
         {tamper && (
-          <p className="text-xs" style={{ color: "rgb(252,165,165)", lineHeight: 1.5 }}>⚠ Tamper hints: {tamper}</p>
+          <p className="text-xs" style={{ color: "var(--tg-risk-high)", lineHeight: 1.5 }}>⚠ Tamper hints: {tamper}</p>
         )}
       </div>
     )
@@ -204,7 +204,7 @@ export default function RealStepData({
     }
     const score = Number(data.score || 0)
     const band = String(data.band || "LOW")
-    const color = band === "HIGH" ? "rgb(248,113,113)" : band === "MEDIUM" ? "rgb(250,204,21)" : "rgb(74,222,128)"
+    const color = riskColorVar(band)
     const bySeverity = (data.by_severity as D[] | undefined) || []
     const signals = (data.signals as D[] | undefined) || []
     return (
@@ -212,12 +212,12 @@ export default function RealStepData({
         <div className="flex items-center gap-4">
           <div className="flex items-end gap-1">
             <span className="text-3xl font-bold tabular-nums" style={{ color }}>{score}</span>
-            <span className="text-sm mb-1" style={{ color: "rgba(255,255,255,0.4)" }}>/100</span>
+            <span className="text-sm mb-1" style={{ color: "var(--tg-text-3)" }}>/100</span>
           </div>
-          <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.07)" }}>
+          <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--tg-track-2)" }}>
             <motion.div
               className="h-full rounded-full"
-              style={{ background: color, boxShadow: `0 0 10px ${color}`, transformOrigin: "left center" }}
+              style={{ background: color, boxShadow: `0 0 10px ${tint(color, 60)}`, transformOrigin: "left center" }}
               initial={{ scaleX: reduced ? 1 : 0 }}
               animate={{ scaleX: 1 }}
               transition={{ duration: reduced ? 0 : 0.7, ease: EASE_OUT }}
@@ -230,7 +230,7 @@ export default function RealStepData({
         {bySeverity.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
             {bySeverity.map((s, i) => (
-              <span key={i} className="text-xs px-2 py-0.5 rounded-md" style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <span key={i} className="text-xs px-2 py-0.5 rounded-md" style={{ background: "var(--tg-surface-2)", color: "var(--tg-text-2)", border: "1px solid var(--tg-border)" }}>
                 {String(s.severity)}: {String(s.count)} · w{String(s.weight)}
               </span>
             ))}
@@ -246,12 +246,12 @@ export default function RealStepData({
     const violates = Boolean(data.violates_official_transfer)
     const signals = (data.signals as D[] | undefined) || []
     const rulesApplied = (data.rules_applied as string[] | undefined) || []
-    const color = violates ? "rgb(248,113,113)" : "rgb(74,222,128)"
+    const color = violates ? "var(--tg-risk-high)" : "var(--tg-risk-low)"
     return (
       <div className="space-y-3">
         <div className="flex items-start gap-3">
           <Pill color={color}>{violates ? "VIOLATION" : "OK"}</Pill>
-          <p className="text-xs" style={{ color: "rgba(255,255,255,0.65)", lineHeight: 1.5 }}>
+          <p className="text-xs" style={{ color: "var(--tg-text-2)", lineHeight: 1.5 }}>
             {violates
               ? "Listing relies on a non-official transfer and/or irreversible payment."
               : "No official-transfer rule violation detected."}
@@ -261,8 +261,8 @@ export default function RealStepData({
         {rulesApplied.length > 0 && (
           <ul className="space-y-1">
             {rulesApplied.map((r, i) => (
-              <li key={i} className="text-xs flex gap-1.5" style={{ color: "rgba(255,255,255,0.45)", lineHeight: 1.45 }}>
-                <span style={{ color: "rgba(255,255,255,0.3)" }}>·</span>{r}
+              <li key={i} className="text-xs flex gap-1.5" style={{ color: "var(--tg-text-3)", lineHeight: 1.45 }}>
+                <span style={{ color: "var(--tg-text-faint)" }}>·</span>{r}
               </li>
             ))}
           </ul>
@@ -275,25 +275,25 @@ export default function RealStepData({
   if (stepNumber === 7) {
     const v = (data as unknown) as RealVerdict
     const level = verdictToLevel(v.verdict)
-    const color = level === "HIGH" ? "rgb(248,113,113)" : level === "MEDIUM" ? "rgb(250,204,21)" : "rgb(74,222,128)"
+    const color = riskColorVar(level)
     const evidence = v.evidence || []
     return (
       <div className="space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
           <Pill color={color}>{v.verdict}</Pill>
           {typeof v.confidence === "number" && (
-            <span className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>confidence {Math.round(v.confidence * 100)}%</span>
+            <span className="text-xs" style={{ color: "var(--tg-text-3)" }}>confidence {Math.round(v.confidence * 100)}%</span>
           )}
         </div>
         {v.reasoning && (
-          <p className="text-sm italic pl-3" style={{ borderLeft: `2px solid ${color}`, color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>
+          <p className="text-sm italic pl-3" style={{ borderLeft: `2px solid ${color}`, color: "var(--tg-text)", lineHeight: 1.5 }}>
             {v.reasoning}
           </p>
         )}
         {evidence.length > 0 && (
           <ul className="space-y-1">
             {evidence.map((e, i) => (
-              <li key={i} className="text-xs flex gap-1.5" style={{ color: "rgba(255,255,255,0.6)", lineHeight: 1.45 }}>
+              <li key={i} className="text-xs flex gap-1.5" style={{ color: "var(--tg-text-2)", lineHeight: 1.45 }}>
                 <span style={{ color }}>•</span>{e}
               </li>
             ))}
@@ -309,9 +309,9 @@ export default function RealStepData({
       return <Note text={`Not persisted: ${String(data.reason || "Atlas unreachable")}. The verdict above is still valid for this session.`} />
     }
     return (
-      <p className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
+      <p className="text-xs" style={{ color: "var(--tg-text-2)" }}>
         Saved to <code>investigations</code> ·{" "}
-        <code style={{ color: "rgb(134,239,172)" }}>{String(data.investigation_id)}</code>
+        <code style={{ color: "var(--tg-green-2)" }}>{String(data.investigation_id)}</code>
       </p>
     )
   }
@@ -320,9 +320,16 @@ export default function RealStepData({
 }
 
 // ── small shared bits ─────────────────────────────────────────────────────────
+// Translucent fills/borders derived from a CSS-var colour (theme-safe).
+const tint = (c: string, pct: number) => `color-mix(in srgb, ${c} ${pct}%, transparent)`
+// Risk band → semantic CSS var (matches RiskCard / InvestigationStep).
+function riskColorVar(level: string): string {
+  return level === "HIGH" ? "var(--tg-risk-high)" : level === "MEDIUM" ? "var(--tg-risk-med)" : "var(--tg-risk-low)"
+}
+
 function Pill({ color, children }: { color: string; children: React.ReactNode }) {
   return (
-    <span className="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0" style={{ background: `${color}22`, color, border: `1px solid ${color}44` }}>
+    <span className="text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0" style={{ background: tint(color, 13), color, border: `1px solid ${tint(color, 27)}` }}>
       {children}
     </span>
   )
@@ -330,7 +337,7 @@ function Pill({ color, children }: { color: string; children: React.ReactNode })
 
 function Note({ text }: { text: string }) {
   return (
-    <p className="text-xs" style={{ color: "rgba(255,255,255,0.45)", lineHeight: 1.5 }}>
+    <p className="text-xs" style={{ color: "var(--tg-text-3)", lineHeight: 1.5 }}>
       {text}
     </p>
   )
@@ -341,13 +348,13 @@ function SignalList({ signals }: { signals: D[] }) {
     <div className="space-y-1.5">
       {signals.slice(0, 6).map((s, i) => {
         const w = Number(s.weight || 0)
-        const color = w >= 30 ? "rgb(248,113,113)" : w >= 15 ? "rgb(250,204,21)" : "rgba(255,255,255,0.5)"
+        const color = w >= 30 ? "var(--tg-risk-high)" : w >= 15 ? "var(--tg-risk-med)" : "var(--tg-text-3)"
         return (
           <div key={i} className="flex items-start gap-2">
-            <span className="text-xs px-1.5 py-0.5 rounded tabular-nums flex-shrink-0" style={{ background: `${color}1f`, color, border: `1px solid ${color}33` }}>
+            <span className="text-xs px-1.5 py-0.5 rounded tabular-nums flex-shrink-0" style={{ background: tint(color, 12), color, border: `1px solid ${tint(color, 20)}` }}>
               +{w}
             </span>
-            <span className="text-xs" style={{ color: "rgba(255,255,255,0.6)", lineHeight: 1.4 }}>
+            <span className="text-xs" style={{ color: "var(--tg-text-2)", lineHeight: 1.4 }}>
               {String(s.detail || s.signal || "")}
             </span>
           </div>

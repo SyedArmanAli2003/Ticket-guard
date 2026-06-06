@@ -338,13 +338,13 @@ function InvestigateContent() {
   )
 
   return (
-    <div style={{ background: "hsl(240,25%,4%)", minHeight: "100vh" }}>
+    <div style={{ background: "var(--tg-bg)", minHeight: "100vh" }}>
       <Navbar />
 
       {/* mock-mode watermark — corner badge complements the Navbar DEMO chip */}
       {isMock && (
         <div className="fixed bottom-4 right-4 z-40 pointer-events-none">
-          <span className="text-xs px-3 py-1.5 rounded-full font-medium" style={{ background: "rgba(234,179,8,0.12)", color: "rgb(250,204,21)", border: "1px solid rgba(234,179,8,0.3)", backdropFilter: "blur(8px)" }}>
+          <span className="text-xs px-3 py-1.5 rounded-full font-medium" style={{ background: "var(--tg-warn-tint)", color: "var(--tg-warn)", border: "1px solid var(--tg-warn-border)", backdropFilter: "blur(8px)" }}>
             DEMO — no live backend
           </span>
         </div>
@@ -356,16 +356,16 @@ function InvestigateContent() {
             {/* UNCONFIGURED state — explicit, no silent mock */}
             {mode === "unconfigured" && !submitted && (
               <motion.div initial={reduced ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: reduced ? 0 : 0.5, ease: EASE_OUT }}
-                className="rounded-2xl p-8" style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(234,179,8,0.3)", boxShadow: "0 0 36px rgba(234,179,8,0.12)" }}>
+                className="rounded-2xl p-8" style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-warn-border)", boxShadow: "var(--tg-shadow), 0 0 36px var(--tg-warn-tint)" }}>
                 <div className="flex items-center gap-3 mb-3">
-                  <AlertTriangle size={22} style={{ color: "rgb(250,204,21)" }} strokeWidth={2.2} />
-                  <h1 className="text-xl font-bold text-white font-display">Not configured</h1>
+                  <AlertTriangle size={22} style={{ color: "var(--tg-warn)" }} strokeWidth={2.2} />
+                  <h1 className="text-xl font-bold font-display" style={{ color: "var(--tg-text)" }}>Not configured</h1>
                 </div>
-                <p className="text-sm mb-2" style={{ color: "rgba(255,255,255,0.6)", lineHeight: 1.6 }}>
-                  No backend is wired up. Set <code style={{ color: "rgb(125,211,252)" }}>NEXT_PUBLIC_API_URL</code> to the TicketGuard
-                  API to run live investigations, or set <code style={{ color: "rgb(125,211,252)" }}>NEXT_PUBLIC_DEMO=mock</code> to use the synthetic demo.
+                <p className="text-sm mb-2" style={{ color: "var(--tg-text-2)", lineHeight: 1.6 }}>
+                  No backend is wired up. Set <code style={{ color: "var(--tg-info)" }}>NEXT_PUBLIC_API_URL</code> to the TicketGuard
+                  API to run live investigations, or set <code style={{ color: "var(--tg-info)" }}>NEXT_PUBLIC_DEMO=mock</code> to use the synthetic demo.
                 </p>
-                <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
+                <p className="text-xs" style={{ color: "var(--tg-text-3)" }}>
                   Nothing is mocked silently — this app never fabricates a verdict.
                 </p>
               </motion.div>
@@ -373,10 +373,10 @@ function InvestigateContent() {
 
             {(isReal || isMock) && !submitted && (
               <motion.div variants={staggerContainer(0.08, 0.04)} initial={reduced ? false : "hidden"} animate="show">
-                <motion.h1 variants={fadeUpItem} className="font-bold mb-3 tracking-tight font-display" style={{ fontSize: "clamp(1.8rem,4.5vw,3rem)", color: "white" }}>
+                <motion.h1 variants={fadeUpItem} className="font-bold mb-3 tracking-tight font-display" style={{ fontSize: "clamp(1.8rem,4.5vw,3rem)", color: "var(--tg-text)" }}>
                   Check a resale listing
                 </motion.h1>
-                <motion.p variants={fadeUpItem} className="mb-6 text-sm" style={{ color: "rgba(255,255,255,0.45)", maxWidth: 560, lineHeight: 1.6 }}>
+                <motion.p variants={fadeUpItem} className="mb-6 text-sm" style={{ color: "var(--tg-text-2)", maxWidth: 560, lineHeight: 1.6 }}>
                   Paste a suspicious listing or seller DM, drop in a ticket PDF/screenshot, or
                   paste a listing URL. The agent extracts the signals, runs a hybrid search over a
                   known-scam corpus, and returns an evidence-backed risk verdict.
@@ -387,15 +387,15 @@ function InvestigateContent() {
                   <motion.div variants={fadeUpItem}>
                     <HealthStrip health={health} loading={healthLoading} />
                     {geminiBlocked && (
-                      <div className="rounded-xl px-4 py-3 mb-5 flex items-center gap-2" style={{ background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)" }}>
-                        <AlertTriangle size={15} style={{ color: "rgb(248,113,113)" }} strokeWidth={2.2} />
-                        <p className="text-xs" style={{ color: "rgb(252,165,165)" }}>Gemini not configured — investigation is unavailable until the backend has a Gemini key.</p>
+                      <div className="rounded-xl px-4 py-3 mb-5 flex items-center gap-2" style={{ background: "var(--tg-risk-high-soft)", border: "1px solid var(--tg-risk-high-border)" }}>
+                        <AlertTriangle size={15} style={{ color: "var(--tg-risk-high)" }} strokeWidth={2.2} />
+                        <p className="text-xs" style={{ color: "var(--tg-risk-high)" }}>Gemini not configured — investigation is unavailable until the backend has a Gemini key.</p>
                       </div>
                     )}
                     {!geminiBlocked && atlasOffline && (
-                      <div className="rounded-xl px-4 py-3 mb-5 flex items-center gap-2" style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.25)" }}>
-                        <AlertTriangle size={15} style={{ color: "rgb(250,204,21)" }} strokeWidth={2.2} />
-                        <p className="text-xs" style={{ color: "rgba(250,204,21,0.95)" }}>DB features offline (retrieval, live feed, persistence). Gemini-only investigation still works — affected steps show “not configured”.</p>
+                      <div className="rounded-xl px-4 py-3 mb-5 flex items-center gap-2" style={{ background: "var(--tg-warn-tint)", border: "1px solid var(--tg-warn-border)" }}>
+                        <AlertTriangle size={15} style={{ color: "var(--tg-warn)" }} strokeWidth={2.2} />
+                        <p className="text-xs" style={{ color: "var(--tg-warn)" }}>DB features offline (retrieval, live feed, persistence). Gemini-only investigation still works — affected steps show “not configured”.</p>
                       </div>
                     )}
                   </motion.div>
@@ -418,9 +418,9 @@ function InvestigateContent() {
                         title={disabled ? "Available in live mode" : undefined}
                         className="inline-flex items-center gap-1.5 text-xs px-3 py-2 rounded-lg cursor-pointer transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                         style={{
-                          background: active ? "rgba(16,185,129,0.14)" : "rgba(255,255,255,0.04)",
-                          color: active ? "hsl(160,84%,72%)" : "rgba(255,255,255,0.6)",
-                          border: `1px solid ${active ? "rgba(16,185,129,0.4)" : "rgba(255,255,255,0.1)"}`,
+                          background: active ? "var(--tg-accent-tint-2)" : "var(--tg-surface-2)",
+                          color: active ? "var(--tg-accent)" : "var(--tg-text-2)",
+                          border: `1px solid ${active ? "var(--tg-accent-border)" : "var(--tg-border-strong)"}`,
                         }}
                       >
                         <Icon size={13} strokeWidth={2.2} /> {label}
@@ -437,10 +437,10 @@ function InvestigateContent() {
                     onChange={e => setText(e.target.value)}
                     placeholder="Paste a resale listing or seller DM here…"
                     maxLength={2000}
-                    className="w-full rounded-xl p-5 text-white text-base resize-none outline-none"
-                    style={{ minHeight: "150px", background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.08)", caretColor: "hsl(160,84%,52%)" }}
-                    onFocus={e => (e.target.style.borderColor = "rgba(16,185,129,0.6)")}
-                    onBlur={e => (e.target.style.borderColor = "rgba(255,255,255,0.08)")}
+                    className="w-full rounded-xl p-5 text-base resize-none outline-none"
+                    style={{ minHeight: "150px", background: "var(--tg-surface)", color: "var(--tg-text)", border: "1px solid var(--tg-border-strong)", caretColor: "var(--tg-accent)" }}
+                    onFocus={e => (e.target.style.borderColor = "var(--tg-accent)")}
+                    onBlur={e => (e.target.style.borderColor = "var(--tg-border-strong)")}
                     onKeyDown={e => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit() }}
                   />
                 )}
@@ -451,10 +451,10 @@ function InvestigateContent() {
                     onChange={e => setUrl(e.target.value)}
                     placeholder="https://marketplace.example/listing/123"
                     inputMode="url"
-                    className="w-full rounded-xl p-5 text-white text-base outline-none"
-                    style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.08)", caretColor: "hsl(160,84%,52%)" }}
-                    onFocus={e => (e.target.style.borderColor = "rgba(16,185,129,0.6)")}
-                    onBlur={e => (e.target.style.borderColor = "rgba(255,255,255,0.08)")}
+                    className="w-full rounded-xl p-5 text-base outline-none"
+                    style={{ background: "var(--tg-surface)", color: "var(--tg-text)", border: "1px solid var(--tg-border-strong)", caretColor: "var(--tg-accent)" }}
+                    onFocus={e => (e.target.style.borderColor = "var(--tg-accent)")}
+                    onBlur={e => (e.target.style.borderColor = "var(--tg-border-strong)")}
                     onKeyDown={e => { if (e.key === "Enter") submit() }}
                   />
                 )}
@@ -462,7 +462,7 @@ function InvestigateContent() {
                   <motion.div variants={fadeUpItem}>
                     <label
                       className="flex flex-col items-center justify-center gap-2 rounded-xl cursor-pointer transition-colors"
-                      style={{ minHeight: 150, background: "hsl(240,15%,8%)", border: "1px dashed rgba(255,255,255,0.16)" }}
+                      style={{ minHeight: 150, background: "var(--tg-surface)", border: "1px dashed var(--tg-border-strong)" }}
                     >
                       <input
                         type="file"
@@ -470,14 +470,14 @@ function InvestigateContent() {
                         className="hidden"
                         onChange={e => setFile(e.target.files?.[0] || null)}
                       />
-                      <Upload size={22} style={{ color: "hsl(160,72%,68%)" }} strokeWidth={2} />
-                      <p className="text-sm" style={{ color: "rgba(255,255,255,0.7)" }}>
+                      <Upload size={22} style={{ color: "var(--tg-accent)" }} strokeWidth={2} />
+                      <p className="text-sm" style={{ color: "var(--tg-text-2)" }}>
                         {file ? file.name : "Click to upload a ticket PDF or screenshot"}
                       </p>
-                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>PDF, PNG, JPG, WEBP</p>
+                      <p className="text-xs" style={{ color: "var(--tg-text-3)" }}>PDF, PNG, JPG, WEBP</p>
                     </label>
                     {file && (
-                      <button onClick={() => setFile(null)} className="inline-flex items-center gap-1 text-xs mt-2 cursor-pointer" style={{ color: "rgba(255,255,255,0.5)" }}>
+                      <button onClick={() => setFile(null)} className="inline-flex items-center gap-1 text-xs mt-2 cursor-pointer" style={{ color: "var(--tg-text-3)" }}>
                         <X size={12} /> Remove
                       </button>
                     )}
@@ -487,13 +487,13 @@ function InvestigateContent() {
                 <motion.div variants={fadeUpItem} className="flex justify-between items-center mt-2 mb-6 flex-wrap gap-2">
                   {ingest === "text" ? (
                     <button onClick={fillExample} className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
-                      style={{ background: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.7)", border: "1px solid rgba(255,255,255,0.1)" }}
-                      onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
-                      onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.05)")}>
+                      style={{ background: "var(--tg-surface-2)", color: "var(--tg-text-2)", border: "1px solid var(--tg-border-strong)" }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "var(--tg-hover)")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "var(--tg-surface-2)")}>
                       <Sparkles size={12} strokeWidth={2.2} /> Try an example
                     </button>
                   ) : <span />}
-                  {ingest === "text" && <p className="text-xs" style={{ color: "rgba(255,255,255,0.25)" }}>{text.length} / 2000 · ⌘/Ctrl + Enter</p>}
+                  {ingest === "text" && <p className="text-xs" style={{ color: "var(--tg-text-3)" }}>{text.length} / 2000 · ⌘/Ctrl + Enter</p>}
                 </motion.div>
 
                 <motion.button
@@ -501,8 +501,8 @@ function InvestigateContent() {
                   onClick={submit}
                   disabled={!canSubmit}
                   whileTap={reduced || !canSubmit ? undefined : { scale: 0.99 }}
-                  className="w-full py-4 rounded-xl font-semibold text-white text-sm cursor-pointer transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
-                  style={{ background: "linear-gradient(180deg, hsl(160,84%,42%), hsl(168,80%,34%))", boxShadow: "0 8px 24px rgba(16,185,129,0.25)" }}
+                  className="w-full py-4 rounded-xl font-semibold text-sm cursor-pointer transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center justify-center gap-2"
+                  style={{ background: "linear-gradient(180deg, var(--tg-accent), var(--tg-accent-2))", color: "var(--tg-on-accent)", boxShadow: "0 8px 24px var(--tg-accent-glow)" }}
                 >
                   {isRunning ? "Investigating…" : (<><Search size={16} strokeWidth={2.4} /> Investigate this listing <ArrowRight size={15} strokeWidth={2.4} /></>)}
                 </motion.button>
@@ -510,14 +510,14 @@ function InvestigateContent() {
                 {/* quick example pills (text only) */}
                 {ingest === "text" && (
                   <motion.div variants={fadeUpItem} className="mt-6">
-                    <p className="text-xs mb-2 uppercase tracking-wider" style={{ color: "rgba(255,255,255,0.3)" }}>Or try one of these</p>
+                    <p className="text-xs mb-2 uppercase tracking-wider" style={{ color: "var(--tg-text-3)" }}>Or try one of these</p>
                     <div className="flex flex-wrap gap-2">
                       {SAMPLE_LISTINGS.map(s => (
                         <button key={s.id} onClick={() => { setText(s.text) }}
                           className="text-xs px-3 py-1.5 rounded-full cursor-pointer transition-colors"
-                          style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.6)", border: "1px solid rgba(255,255,255,0.08)" }}
-                          onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(16,185,129,0.35)")}
-                          onMouseLeave={e => (e.currentTarget.style.borderColor = "rgba(255,255,255,0.08)")}>
+                          style={{ background: "var(--tg-surface-2)", color: "var(--tg-text-2)", border: "1px solid var(--tg-border-strong)" }}
+                          onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--tg-accent-border)")}
+                          onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--tg-border-strong)")}>
                           {s.label}
                         </button>
                       ))}
@@ -525,7 +525,7 @@ function InvestigateContent() {
                   </motion.div>
                 )}
 
-                <motion.p variants={fadeUpItem} className="text-xs mt-8" style={{ color: "rgba(255,255,255,0.28)", lineHeight: 1.5 }}>
+                <motion.p variants={fadeUpItem} className="text-xs mt-8" style={{ color: "var(--tg-text-3)", lineHeight: 1.5 }}>
                   Decision-support only, not a guarantee — verify independently.{isMock ? " About the data: synthetic demo data only." : ""}
                 </motion.p>
               </motion.div>
@@ -536,15 +536,15 @@ function InvestigateContent() {
                 <div className="mb-6">
                   <div className="flex justify-between items-start mb-3 gap-4">
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs uppercase tracking-wider mb-1" style={{ color: "rgba(255,255,255,0.35)" }}>Investigating</p>
-                      <p className="text-sm" style={{ color: "rgba(255,255,255,0.78)", lineHeight: 1.5 }}>
+                      <p className="text-xs uppercase tracking-wider mb-1" style={{ color: "var(--tg-text-3)" }}>Investigating</p>
+                      <p className="text-sm" style={{ color: "var(--tg-text)", lineHeight: 1.5 }}>
                         &ldquo;{recap.length > 180 ? recap.slice(0, 180) + "…" : recap}&rdquo;
                       </p>
                     </div>
-                    <p className="text-xs flex-shrink-0 mt-4" style={{ color: "rgba(255,255,255,0.4)" }}>{completedCount}/{TOTAL}</p>
+                    <p className="text-xs flex-shrink-0 mt-4" style={{ color: "var(--tg-text-3)" }}>{completedCount}/{TOTAL}</p>
                   </div>
-                  <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-                    <motion.div className="h-full rounded-full" style={{ background: "hsl(160,84%,46%)", boxShadow: "0 0 8px rgba(16,185,129,0.5)" }}
+                  <div className="w-full h-1 rounded-full overflow-hidden" style={{ background: "var(--tg-track-2)" }}>
+                    <motion.div className="h-full rounded-full" style={{ background: "var(--tg-accent)", boxShadow: "0 0 8px var(--tg-accent-glow)" }}
                       animate={{ width: `${(completedCount / TOTAL) * 100}%` }} transition={{ duration: reduced ? 0 : 0.7, ease: EASE_OUT }} />
                   </div>
                 </div>
@@ -553,11 +553,11 @@ function InvestigateContent() {
 
                 {/* hard-stop / transport error (honest) */}
                 {runError && !isRunning && (
-                  <div className="rounded-2xl p-5 mt-3 mb-1 flex items-start gap-3" style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(239,68,68,0.3)" }}>
-                    <AlertTriangle size={18} style={{ color: "rgb(248,113,113)" }} strokeWidth={2.2} />
+                  <div className="rounded-2xl p-5 mt-3 mb-1 flex items-start gap-3" style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-risk-high-border)" }}>
+                    <AlertTriangle size={18} style={{ color: "var(--tg-risk-high)" }} strokeWidth={2.2} />
                     <div>
-                      <p className="text-sm font-medium" style={{ color: "rgb(252,165,165)" }}>Investigation could not complete</p>
-                      <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.6)", lineHeight: 1.5 }}>{runError}</p>
+                      <p className="text-sm font-medium" style={{ color: "var(--tg-risk-high)" }}>Investigation could not complete</p>
+                      <p className="text-xs mt-1" style={{ color: "var(--tg-text-2)", lineHeight: 1.5 }}>{runError}</p>
                     </div>
                   </div>
                 )}
@@ -571,8 +571,10 @@ function InvestigateContent() {
                 </AnimatePresence>
 
                 {!isRunning && (
-                  <button onClick={reset} className="w-full mt-2 py-3 rounded-xl font-medium text-sm cursor-pointer inline-flex items-center justify-center gap-1.5 transition-colors hover:bg-white/5"
-                    style={{ background: "rgba(255,255,255,0.04)", color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                  <button onClick={reset} className="w-full mt-2 py-3 rounded-xl font-medium text-sm cursor-pointer inline-flex items-center justify-center gap-1.5 transition-colors"
+                    style={{ background: "var(--tg-surface-2)", color: "var(--tg-text-2)", border: "1px solid var(--tg-border-strong)" }}
+                    onMouseEnter={e => (e.currentTarget.style.background = "var(--tg-hover)")}
+                    onMouseLeave={e => (e.currentTarget.style.background = "var(--tg-surface-2)")}>
                     <ArrowLeft size={15} strokeWidth={2.2} /> Check another listing
                   </button>
                 )}
@@ -592,7 +594,7 @@ function InvestigateContent() {
 
 export default function InvestigatePage() {
   return (
-    <Suspense fallback={<div style={{ background: "hsl(240,25%,4%)", minHeight: "100vh" }} />}>
+    <Suspense fallback={<div style={{ background: "var(--tg-bg)", minHeight: "100vh" }} />}>
       <InvestigateContent />
     </Suspense>
   )

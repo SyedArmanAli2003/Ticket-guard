@@ -35,7 +35,7 @@ export default function PremiumBackground({
             transform: "translateX(-50%)",
             pointerEvents: "none",
             background:
-              "radial-gradient(circle at 50% 45%, rgba(16,185,129,0.16), rgba(13,148,136,0.06) 45%, transparent 70%)",
+              "radial-gradient(circle at 50% 45%, var(--tg-accent-tint-2), var(--tg-accent-tint) 45%, transparent 70%)",
             filter: "blur(20px)",
           }}
         />

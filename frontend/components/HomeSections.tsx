@@ -23,27 +23,27 @@ const STEPS = [
   {
     n: "01",
     badge: "GEMINI",
-    badgeColor: "hsl(258,80%,78%)",
-    badgeBg: "rgba(124,58,237,0.12)",
-    badgeBorder: "rgba(124,58,237,0.25)",
+    badgeColor: "var(--tg-violet)",
+    badgeBg: "var(--tg-violet-tint)",
+    badgeBorder: "var(--tg-violet-border)",
     title: "Extract the signals",
     body: "Gemini pulls the price, seller handle, any domain, the payment method and urgency cues out of the raw listing or DM.",
   },
   {
     n: "02",
     badge: "VECTOR",
-    badgeColor: "rgb(125,211,252)",
-    badgeBg: "rgba(14,165,233,0.1)",
-    badgeBorder: "rgba(14,165,233,0.25)",
+    badgeColor: "var(--tg-info)",
+    badgeBg: "var(--tg-info-tint)",
+    badgeBorder: "var(--tg-info-border)",
     title: "Hybrid search the corpus",
     body: "A vector pipeline and a full-text pipeline run over a corpus of known scam patterns, blending semantic and keyword relevance.",
   },
   {
     n: "03",
     badge: "MONGODB",
-    badgeColor: "rgb(74,222,128)",
-    badgeBg: "rgba(34,197,94,0.12)",
-    badgeBorder: "rgba(34,197,94,0.25)",
+    badgeColor: "var(--tg-green)",
+    badgeBg: "var(--tg-green-tint)",
+    badgeBorder: "var(--tg-green-border)",
     title: "Score & verify the verdict",
     body: "An aggregation scores the risk, a rule checks for official digital transfer, and Gemini writes an evidence-backed verdict.",
   },
@@ -51,10 +51,10 @@ const STEPS = [
 
 // Pipeline nodes for the animated "How it works" diagram.
 const PIPELINE = [
-  { label: "Ingest", sub: "listing / DM", Icon: FileText, color: "hsl(258,80%,76%)" },
-  { label: "Agents", sub: "Gemini 2.5", Icon: Bot, color: "rgb(125,211,252)" },
-  { label: "MongoDB", sub: "Atlas + MCP", Icon: Database, color: "rgb(74,222,128)" },
-  { label: "Verdict", sub: "evidence-backed", Icon: ShieldCheck, color: "hsl(160,84%,62%)" },
+  { label: "Ingest", sub: "listing / DM", Icon: FileText, color: "var(--tg-violet)" },
+  { label: "Agents", sub: "Gemini 2.5", Icon: Bot, color: "var(--tg-info)" },
+  { label: "MongoDB", sub: "Atlas + MCP", Icon: Database, color: "var(--tg-green)" },
+  { label: "Verdict", sub: "evidence-backed", Icon: ShieldCheck, color: "var(--tg-accent)" },
 ]
 
 const VIEWPORT = { once: true, amount: 0.3 } as const
@@ -67,17 +67,17 @@ function FlowArrow({ reduced, vertical = false }: { reduced: boolean; vertical?:
       aria-hidden
     >
       <svg width="100%" height="24" viewBox="0 0 100 24" preserveAspectRatio="none" style={vertical ? { transform: "rotate(90deg)", width: 24, height: 24 } : undefined}>
-        <line x1="2" y1="12" x2="92" y2="12" stroke="rgba(16,185,129,0.25)" strokeWidth="1.5" />
+        <line x1="2" y1="12" x2="92" y2="12" stroke="var(--tg-accent-border)" strokeWidth="1.5" />
         {!reduced && (
           <line
             x1="2" y1="12" x2="92" y2="12"
-            stroke="hsl(160,84%,58%)" strokeWidth="1.5" strokeLinecap="round"
+            stroke="var(--tg-accent)" strokeWidth="1.5" strokeLinecap="round"
             strokeDasharray="10 90"
           >
             <animate attributeName="stroke-dashoffset" from="100" to="0" dur="1.6s" repeatCount="indefinite" />
           </line>
         )}
-        <path d="M88 7 L96 12 L88 17" fill="none" stroke="hsl(160,84%,58%)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M88 7 L96 12 L88 17" fill="none" stroke="var(--tg-accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     </div>
   )
@@ -88,12 +88,12 @@ export default function HomeSections() {
   const reduced = usePrefersReducedMotion()
 
   return (
-    <div style={{ background: "hsl(240,28%,3.5%)" }}>
+    <div style={{ background: "var(--tg-bg)" }}>
       {/* ── How it works ───────────────────────────────────────────────── */}
       <section id="how" className="relative max-w-5xl mx-auto px-6 py-20 scroll-mt-24">
         <motion.p
           className="text-xs uppercase tracking-[0.2em] mb-3"
-          style={{ color: "hsl(160,70%,58%)" }}
+          style={{ color: "var(--tg-accent)" }}
           initial={reduced ? false : { opacity: 0, y: 12 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={VIEWPORT}
@@ -102,8 +102,8 @@ export default function HomeSections() {
           How it works
         </motion.p>
         <motion.h2
-          className="font-bold text-white mb-8"
-          style={{ fontSize: "clamp(1.6rem,3.5vw,2.4rem)", letterSpacing: "-0.02em" }}
+          className="font-bold mb-8"
+          style={{ fontSize: "clamp(1.6rem,3.5vw,2.4rem)", letterSpacing: "-0.02em", color: "var(--tg-text)" }}
           initial={reduced ? false : { opacity: 0, y: 14 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={VIEWPORT}
@@ -115,7 +115,7 @@ export default function HomeSections() {
         {/* Animated pipeline diagram: Ingest → Agents → MongoDB → Verdict */}
         <motion.div
           className="rounded-2xl p-5 md:p-6 mb-8"
-          style={{ background: "hsl(240,15%,7%)", border: "1px solid rgba(255,255,255,0.07)" }}
+          style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-border)", boxShadow: "var(--tg-shadow)" }}
           variants={staggerContainer(0.12, 0.05)}
           initial={reduced ? false : "hidden"}
           whileInView="show"
@@ -132,16 +132,16 @@ export default function HomeSections() {
                       style={{
                         width: 52,
                         height: 52,
-                        background: "rgba(255,255,255,0.03)",
-                        border: `1px solid ${node.color}55`,
-                        boxShadow: `0 0 18px ${node.color}22`,
+                        background: "var(--tg-surface-2)",
+                        border: `1px solid color-mix(in srgb, ${node.color} 33%, transparent)`,
+                        boxShadow: `0 0 18px color-mix(in srgb, ${node.color} 13%, transparent)`,
                       }}
                     >
                       <Icon size={22} style={{ color: node.color }} strokeWidth={2} />
                     </div>
                     <div className="md:text-center">
-                      <p className="text-sm font-semibold text-white">{node.label}</p>
-                      <p className="text-xs" style={{ color: "rgba(255,255,255,0.42)" }}>{node.sub}</p>
+                      <p className="text-sm font-semibold" style={{ color: "var(--tg-text)" }}>{node.label}</p>
+                      <p className="text-xs" style={{ color: "var(--tg-text-3)" }}>{node.sub}</p>
                     </div>
                   </motion.div>
                   {i < PIPELINE.length - 1 && (
@@ -168,10 +168,10 @@ export default function HomeSections() {
               key={s.n}
               variants={cardRise}
               className="rounded-2xl p-6"
-              style={{ background: "hsl(240,15%,8%)", border: "1px solid rgba(255,255,255,0.07)" }}
+              style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-border)", boxShadow: "var(--tg-shadow)" }}
             >
               <div className="flex items-center justify-between mb-4">
-                <span className="text-2xl font-bold font-display" style={{ color: "rgba(255,255,255,0.18)" }}>{s.n}</span>
+                <span className="text-2xl font-bold font-display" style={{ color: "var(--tg-text-faint)" }}>{s.n}</span>
                 <span
                   className="text-xs px-2 py-0.5 rounded-full"
                   style={{ background: s.badgeBg, color: s.badgeColor, border: `1px solid ${s.badgeBorder}` }}
@@ -179,16 +179,16 @@ export default function HomeSections() {
                   {s.badge}
                 </span>
               </div>
-              <p className="text-white font-semibold mb-2">{s.title}</p>
-              <p className="text-sm" style={{ color: "rgba(255,255,255,0.55)", lineHeight: 1.6 }}>{s.body}</p>
+              <p className="font-semibold mb-2" style={{ color: "var(--tg-text)" }}>{s.title}</p>
+              <p className="text-sm" style={{ color: "var(--tg-text-2)", lineHeight: 1.6 }}>{s.body}</p>
             </motion.div>
           ))}
         </motion.div>
         <div className="mt-8">
           <button
             onClick={() => router.push("/investigate")}
-            className="inline-flex items-center gap-1.5 px-6 py-3 rounded-xl font-semibold text-sm text-white cursor-pointer transition-transform duration-200 active:scale-[0.97]"
-            style={{ background: "linear-gradient(180deg, hsl(160,84%,42%), hsl(168,80%,34%))", boxShadow: "0 8px 24px rgba(16,185,129,0.28)" }}
+            className="inline-flex items-center gap-1.5 px-6 py-3 rounded-xl font-semibold text-sm cursor-pointer transition-transform duration-200 active:scale-[0.97]"
+            style={{ background: "linear-gradient(180deg, var(--tg-accent), var(--tg-accent-2))", color: "var(--tg-on-accent)", boxShadow: "0 8px 24px var(--tg-accent-glow)" }}
           >
             Try it on a listing
             <ArrowRight size={15} strokeWidth={2.4} />
@@ -200,19 +200,19 @@ export default function HomeSections() {
       <section id="portals" className="relative max-w-5xl mx-auto px-6 pb-8 scroll-mt-24">
         <motion.div
           className="rounded-2xl p-8"
-          style={{ background: "hsl(240,15%,7%)", border: "1px solid rgba(255,255,255,0.07)" }}
+          style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-border)", boxShadow: "var(--tg-shadow)" }}
           initial={reduced ? false : { opacity: 0, y: 18 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={VIEWPORT}
           transition={{ duration: 0.55, ease: EASE_OUT }}
         >
-          <p className="text-xs uppercase tracking-[0.2em] mb-3" style={{ color: "hsl(160,70%,58%)" }}>
+          <p className="text-xs uppercase tracking-[0.2em] mb-3" style={{ color: "var(--tg-accent)" }}>
             For portals
           </p>
-          <h2 className="font-bold text-white mb-3" style={{ fontSize: "clamp(1.4rem,3vw,2rem)", letterSpacing: "-0.02em" }}>
+          <h2 className="font-bold mb-3" style={{ fontSize: "clamp(1.4rem,3vw,2rem)", letterSpacing: "-0.02em", color: "var(--tg-text)" }}>
             Drop-in protection for any resale marketplace
           </h2>
-          <p className="text-sm mb-6" style={{ color: "rgba(255,255,255,0.55)", maxWidth: "640px", lineHeight: 1.6 }}>
+          <p className="text-sm mb-6" style={{ color: "var(--tg-text-2)", maxWidth: "640px", lineHeight: 1.6 }}>
             Embed the TicketGuard risk check on a listing page with a single tag,
             or call it programmatically — the same investigation is exposed as an
             MCP tool so agents can verify a listing inline.
@@ -229,24 +229,24 @@ export default function HomeSections() {
             <motion.div
               variants={fadeUpItem}
               className="rounded-xl p-5"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
+              style={{ background: "var(--tg-surface-2)", border: "1px solid var(--tg-border)" }}
             >
-              <p className="text-xs font-semibold text-white mb-3 flex items-center gap-1.5">
-                <Code2 size={14} style={{ color: "hsl(160,84%,62%)" }} strokeWidth={2.2} />
+              <p className="text-xs font-semibold mb-3 flex items-center gap-1.5" style={{ color: "var(--tg-text)" }}>
+                <Code2 size={14} style={{ color: "var(--tg-accent)" }} strokeWidth={2.2} />
                 One-line embed
               </p>
               <pre
                 className="text-xs rounded-lg p-3 overflow-x-auto"
                 style={{
-                  background: "hsl(240,18%,5%)",
-                  border: "1px solid rgba(255,255,255,0.06)",
-                  color: "rgb(125,211,252)",
+                  background: "var(--tg-code-bg)",
+                  border: "1px solid var(--tg-code-border)",
+                  color: "var(--tg-info)",
                   fontFamily: "var(--font-display), ui-monospace, monospace",
                 }}
               >
                 <code>{`<script src="https://cdn.ticketguard.dev/widget.js"></script>`}</code>
               </pre>
-              <p className="text-xs mt-3" style={{ color: "rgba(255,255,255,0.42)", lineHeight: 1.5 }}>
+              <p className="text-xs mt-3" style={{ color: "var(--tg-text-3)", lineHeight: 1.5 }}>
                 Renders a risk badge next to any listing and opens the full
                 investigation on click.
               </p>
@@ -256,25 +256,25 @@ export default function HomeSections() {
             <motion.div
               variants={fadeUpItem}
               className="rounded-xl p-5"
-              style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
+              style={{ background: "var(--tg-surface-2)", border: "1px solid var(--tg-border)" }}
             >
-              <p className="text-xs font-semibold text-white mb-3 flex items-center gap-1.5">
-                <Plug size={14} style={{ color: "rgb(74,222,128)" }} strokeWidth={2.2} />
+              <p className="text-xs font-semibold mb-3 flex items-center gap-1.5" style={{ color: "var(--tg-text)" }}>
+                <Plug size={14} style={{ color: "var(--tg-green)" }} strokeWidth={2.2} />
                 Exposed as an MCP tool
               </p>
               <pre
                 className="text-xs rounded-lg p-3 overflow-x-auto"
                 style={{
-                  background: "hsl(240,18%,5%)",
-                  border: "1px solid rgba(255,255,255,0.06)",
-                  color: "rgb(134,239,172)",
+                  background: "var(--tg-code-bg)",
+                  border: "1px solid var(--tg-code-border)",
+                  color: "var(--tg-green-2)",
                   fontFamily: "var(--font-display), ui-monospace, monospace",
                 }}
               >
                 <code>{`tool: check_listing(text) → verdict`}</code>
               </pre>
-              <p className="text-xs mt-3" style={{ color: "rgba(255,255,255,0.42)", lineHeight: 1.5 }}>
-                Any MCP-capable agent can call <code style={{ color: "rgb(134,239,172)" }}>check_listing</code> to
+              <p className="text-xs mt-3" style={{ color: "var(--tg-text-3)", lineHeight: 1.5 }}>
+                Any MCP-capable agent can call <code style={{ color: "var(--tg-green-2)" }}>check_listing</code> to
                 score a listing and get the same evidence-backed verdict inline.
               </p>
             </motion.div>
@@ -286,19 +286,19 @@ export default function HomeSections() {
       <section id="data" className="relative max-w-5xl mx-auto px-6 pb-24 pt-12 scroll-mt-24">
         <motion.div
           className="rounded-2xl p-8"
-          style={{ background: "hsl(240,15%,7%)", border: "1px solid rgba(255,255,255,0.07)" }}
+          style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-border)", boxShadow: "var(--tg-shadow)" }}
           initial={reduced ? false : { opacity: 0, y: 18 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={VIEWPORT}
           transition={{ duration: 0.55, ease: EASE_OUT }}
         >
-          <p className="text-xs uppercase tracking-[0.2em] mb-3" style={{ color: "hsl(160,70%,58%)" }}>
+          <p className="text-xs uppercase tracking-[0.2em] mb-3" style={{ color: "var(--tg-accent)" }}>
             About the data
           </p>
-          <h2 className="font-bold text-white mb-3" style={{ fontSize: "clamp(1.4rem,3vw,2rem)", letterSpacing: "-0.02em" }}>
+          <h2 className="font-bold mb-3" style={{ fontSize: "clamp(1.4rem,3vw,2rem)", letterSpacing: "-0.02em", color: "var(--tg-text)" }}>
             Synthetic demo data only
           </h2>
-          <p className="text-sm mb-6" style={{ color: "rgba(255,255,255,0.55)", maxWidth: "640px", lineHeight: 1.6 }}>
+          <p className="text-sm mb-6" style={{ color: "var(--tg-text-2)", maxWidth: "640px", lineHeight: 1.6 }}>
             Every example, seller handle, domain and risk verdict in this demo is
             synthetic and generated for illustration. TicketGuard surfaces
             risk signals consistent with documented patterns — it is decision-support,
@@ -322,15 +322,15 @@ export default function HomeSections() {
                 key={m.l}
                 variants={cardRise}
                 className="rounded-xl p-4 text-center"
-                style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.06)" }}
+                style={{ background: "var(--tg-surface-2)", border: "1px solid var(--tg-border)" }}
               >
-                <p className="font-bold text-white text-xl font-display">{m.v}</p>
-                <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.4)" }}>{m.l}</p>
+                <p className="font-bold text-xl font-display" style={{ color: "var(--tg-text)" }}>{m.v}</p>
+                <p className="text-xs mt-1" style={{ color: "var(--tg-text-3)" }}>{m.l}</p>
               </motion.div>
             ))}
           </motion.div>
         </motion.div>
-        <p className="text-center text-xs mt-8" style={{ color: "rgba(255,255,255,0.25)" }}>
+        <p className="text-center text-xs mt-8" style={{ color: "var(--tg-text-faint)" }}>
           TicketGuard · MongoDB Atlas Vector Search · Gemini 2.5 · MongoDB MCP · Change Streams
         </p>
       </section>

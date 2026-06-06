@@ -17,30 +17,30 @@ const RISK_THEME: Record<
     verdict: "Scam",
     tag: "SCAM",
     signal: "High-risk signals",
-    color: "rgb(248,113,113)",
-    soft: "rgba(239,68,68,0.10)",
-    border: "rgba(239,68,68,0.45)",
-    glow: "rgba(239,68,68,0.22)",
+    color: "var(--tg-risk-high)",
+    soft: "var(--tg-risk-high-soft)",
+    border: "var(--tg-risk-high-border)",
+    glow: "var(--tg-risk-high-glow)",
     Icon: ShieldAlert,
   },
   MEDIUM: {
     verdict: "Suspicious",
     tag: "SUSPICIOUS",
     signal: "Elevated-risk signals",
-    color: "rgb(250,204,21)",
-    soft: "rgba(234,179,8,0.10)",
-    border: "rgba(234,179,8,0.45)",
-    glow: "rgba(234,179,8,0.20)",
+    color: "var(--tg-risk-med)",
+    soft: "var(--tg-risk-med-soft)",
+    border: "var(--tg-risk-med-border)",
+    glow: "var(--tg-risk-med-glow)",
     Icon: AlertTriangle,
   },
   LOW: {
     verdict: "Likely-legit",
     tag: "LIKELY-LEGIT",
     signal: "No high-risk signals",
-    color: "rgb(74,222,128)",
-    soft: "rgba(34,197,94,0.10)",
-    border: "rgba(34,197,94,0.45)",
-    glow: "rgba(34,197,94,0.20)",
+    color: "var(--tg-risk-low)",
+    soft: "var(--tg-risk-low-soft)",
+    border: "var(--tg-risk-low-border)",
+    glow: "var(--tg-risk-low-glow)",
     Icon: ShieldCheck,
   },
 }
@@ -62,7 +62,7 @@ function ScoreGauge({ score, color, reduced }: { score: number; color: string; r
         <path
           d={`M ${stroke / 2} ${size / 2} A ${r} ${r} 0 0 1 ${size - stroke / 2} ${size / 2}`}
           fill="none"
-          stroke="rgba(255,255,255,0.08)"
+          stroke="var(--tg-track)"
           strokeWidth={stroke}
           strokeLinecap="round"
         />
@@ -82,7 +82,7 @@ function ScoreGauge({ score, color, reduced }: { score: number; color: string; r
       </svg>
       <div className="absolute inset-x-0 flex flex-col items-center" style={{ bottom: 0 }}>
         <span className="text-2xl font-bold tabular-nums leading-none font-display" style={{ color }}>{value}</span>
-        <span className="text-[0.55rem] mt-0.5" style={{ color: "rgba(255,255,255,0.4)" }}>risk / 100</span>
+        <span className="text-[0.55rem] mt-0.5" style={{ color: "var(--tg-text-3)" }}>risk / 100</span>
       </div>
     </div>
   )
@@ -109,9 +109,9 @@ export default function RiskCard({
       transition={{ duration: reduced ? 0 : 0.6, ease: EASE_OUT }}
       className="rounded-2xl p-6 mb-4"
       style={{
-        background: "hsl(240,15%,8%)",
+        background: "var(--tg-surface)",
         border: `1px solid ${t.border}`,
-        boxShadow: `0 0 36px ${t.glow}`,
+        boxShadow: `var(--tg-shadow), 0 0 36px ${t.glow}`,
       }}
     >
       {/* Verdict header */}
@@ -119,7 +119,7 @@ export default function RiskCard({
         <div className="flex items-center gap-4">
           <ScoreGauge score={riskScore} color={t.color} reduced={reduced} />
           <div>
-            <p className="text-xs uppercase tracking-[0.18em] mb-1 flex items-center gap-1.5" style={{ color: "rgba(255,255,255,0.4)" }}>
+            <p className="text-xs uppercase tracking-[0.18em] mb-1 flex items-center gap-1.5" style={{ color: "var(--tg-text-3)" }}>
               Risk verdict
             </p>
             <p className="text-2xl font-bold font-display flex items-center gap-2" style={{ color: t.color }}>
@@ -133,24 +133,24 @@ export default function RiskCard({
               </motion.span>
               {t.verdict}
             </p>
-            <p className="text-xs mt-1" style={{ color: "rgba(255,255,255,0.45)" }}>{t.signal} detected</p>
+            <p className="text-xs mt-1" style={{ color: "var(--tg-text-3)" }}>{t.signal} detected</p>
           </div>
         </div>
         <span
           className="text-xs px-3 py-1.5 rounded-full font-semibold uppercase tracking-wider"
-          style={{ background: `${t.color}1f`, color: t.color, border: `1px solid ${t.border}` }}
+          style={{ background: `color-mix(in srgb, ${t.color} 12%, transparent)`, color: t.color, border: `1px solid ${t.border}` }}
         >
           {t.tag}
         </span>
       </div>
 
       {/* One-line rationale (risk-signal language) */}
-      <p className="text-sm mt-4 mb-5" style={{ color: "rgba(255,255,255,0.78)", lineHeight: 1.6 }}>
+      <p className="text-sm mt-4 mb-5" style={{ color: "var(--tg-text)", lineHeight: 1.6 }}>
         {rationale}
       </p>
 
       {/* Evidence chips */}
-      <p className="text-xs uppercase tracking-[0.18em] mb-3" style={{ color: "rgba(255,255,255,0.4)" }}>
+      <p className="text-xs uppercase tracking-[0.18em] mb-3" style={{ color: "var(--tg-text-3)" }}>
         Evidence
       </p>
       <motion.div
@@ -164,10 +164,10 @@ export default function RiskCard({
             key={i}
             variants={cardRise}
             className="rounded-xl p-4"
-            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}
+            style={{ background: "var(--tg-surface-2)", border: "1px solid var(--tg-border)" }}
           >
-            <p className="text-xs font-semibold text-white mb-1.5">{e.label}</p>
-            <p className="text-xs mb-3" style={{ color: "rgba(255,255,255,0.5)", lineHeight: 1.5 }}>{e.why}</p>
+            <p className="text-xs font-semibold mb-1.5" style={{ color: "var(--tg-text)" }}>{e.label}</p>
+            <p className="text-xs mb-3" style={{ color: "var(--tg-text-2)", lineHeight: 1.5 }}>{e.why}</p>
             <ContributionBars vector={e.vectorScore} text={e.textScore} />
           </motion.div>
         ))}
@@ -180,9 +180,9 @@ export default function RiskCard({
           disabled={reported}
           className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all duration-200 disabled:cursor-default active:scale-[0.97]"
           style={{
-            background: reported ? "rgba(34,197,94,0.12)" : "rgba(239,68,68,0.12)",
-            color: reported ? "rgb(74,222,128)" : "rgb(248,113,113)",
-            border: `1px solid ${reported ? "rgba(34,197,94,0.3)" : "rgba(239,68,68,0.3)"}`,
+            background: reported ? "var(--tg-risk-low-soft)" : "var(--tg-risk-high-soft)",
+            color: reported ? "var(--tg-risk-low)" : "var(--tg-risk-high)",
+            border: `1px solid ${reported ? "var(--tg-risk-low-border)" : "var(--tg-risk-high-border)"}`,
           }}
         >
           {reported ? <ShieldCheck size={15} strokeWidth={2.4} /> : <Flag size={15} strokeWidth={2.4} />}
@@ -193,9 +193,9 @@ export default function RiskCard({
           onClick={e => e.preventDefault()}
           className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all duration-200 active:scale-[0.97]"
           style={{
-            background: "linear-gradient(180deg, hsl(160,84%,42%), hsl(168,80%,34%))",
-            color: "white",
-            border: "1px solid rgba(16,185,129,0.4)",
+            background: "linear-gradient(180deg, var(--tg-accent), var(--tg-accent-2))",
+            color: "var(--tg-on-accent)",
+            border: "1px solid var(--tg-accent-border)",
           }}
         >
           Find verified resale
@@ -204,16 +204,16 @@ export default function RiskCard({
         <button
           className="px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all duration-200 active:scale-[0.97]"
           style={{
-            background: "rgba(255,255,255,0.04)",
-            color: "rgba(255,255,255,0.6)",
-            border: "1px solid rgba(255,255,255,0.1)",
+            background: "var(--tg-surface-2)",
+            color: "var(--tg-text-2)",
+            border: "1px solid var(--tg-border-strong)",
           }}
         >
           Proceed, I accept the risk
         </button>
       </div>
 
-      <p className="text-xs mt-4" style={{ color: "rgba(255,255,255,0.3)", lineHeight: 1.5 }}>
+      <p className="text-xs mt-4" style={{ color: "var(--tg-text-3)", lineHeight: 1.5 }}>
         Decision-support only, not a guarantee — verify the seller independently and pay only through official, protected channels. Risk signals reflect synthetic demo patterns.
       </p>
     </motion.div>

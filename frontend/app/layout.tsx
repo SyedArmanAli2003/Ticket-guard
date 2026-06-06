@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { Space_Grotesk, Inter } from "next/font/google"
 import "./globals.css"
+import ThemeProvider from "@/components/ThemeProvider"
 
 // Distinctive display face for headings + technical chrome.
 const display = Space_Grotesk({
@@ -34,9 +35,16 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${display.variable} ${body.variable}`}>
+    <html lang="en" className={`${display.variable} ${body.variable}`} suppressHydrationWarning>
       <body className="font-body antialiased">
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   )

@@ -6,9 +6,9 @@ import { relativeTime } from "@/lib/mock"
 import { usePrefersReducedMotion, feedFlyIn } from "@/lib/motion"
 
 const DOT: Record<RiskLevel, string> = {
-  HIGH: "rgb(248,113,113)",
-  MEDIUM: "rgb(250,204,21)",
-  LOW: "rgb(74,222,128)",
+  HIGH: "var(--tg-risk-high)",
+  MEDIUM: "var(--tg-risk-med)",
+  LOW: "var(--tg-risk-low)",
 }
 
 export default function LiveFeed({
@@ -31,24 +31,24 @@ export default function LiveFeed({
   }, [])
 
   const badge = offline
-    ? { text: "feed offline", bg: "rgba(255,255,255,0.05)", color: "rgba(255,255,255,0.5)", border: "rgba(255,255,255,0.12)" }
+    ? { text: "feed offline", bg: "var(--tg-hover)", color: "var(--tg-text-3)", border: "var(--tg-border-strong)" }
     : mock
-    ? { text: "demo · simulated", bg: "rgba(234,179,8,0.1)", color: "rgb(250,204,21)", border: "rgba(234,179,8,0.28)" }
-    : { text: "live · change stream", bg: "rgba(34,197,94,0.1)", color: "rgb(74,222,128)", border: "rgba(34,197,94,0.22)" }
+    ? { text: "demo · simulated", bg: "var(--tg-warn-tint)", color: "var(--tg-warn)", border: "var(--tg-warn-border)" }
+    : { text: "live · change stream", bg: "var(--tg-green-tint)", color: "var(--tg-green)", border: "var(--tg-green-border)" }
 
   return (
     <div
       id="feed"
       className="rounded-2xl p-5 scroll-mt-24"
-      style={{ background: "hsl(240,15%,7.5%)", border: "1px solid rgba(255,255,255,0.07)" }}
+      style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-border)", boxShadow: "var(--tg-shadow)" }}
     >
       <div className="flex items-center justify-between mb-1">
         <div className="flex items-center gap-2">
           <span
             className={offline ? "inline-block w-2 h-2 rounded-full" : "live-dot inline-block w-2 h-2 rounded-full"}
-            style={{ background: offline ? "rgba(255,255,255,0.3)" : "hsl(150,90%,60%)" }}
+            style={{ background: offline ? "var(--tg-text-3)" : "var(--tg-accent-bright)" }}
           />
-          <p className="text-sm font-semibold text-white">Recently reported</p>
+          <p className="text-sm font-semibold" style={{ color: "var(--tg-text)" }}>Recently reported</p>
         </div>
         <span
           className="text-xs px-2 py-0.5 rounded-full"
@@ -57,14 +57,14 @@ export default function LiveFeed({
           {badge.text}
         </span>
       </div>
-      <p className="text-xs mb-4" style={{ color: "rgba(255,255,255,0.42)", lineHeight: 1.5 }}>
+      <p className="text-xs mb-4" style={{ color: "var(--tg-text-3)", lineHeight: 1.5 }}>
         {offline
           ? "Live feed offline — the reports change-stream isn't configured (needs MongoDB Atlas as a replica set)."
           : "Every report makes the global corpus smarter — the next fan is protected."}
       </p>
 
       {offline && items.length === 0 && (
-        <p className="text-xs rounded-xl p-3" style={{ color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}>
+        <p className="text-xs rounded-xl p-3" style={{ color: "var(--tg-text-3)", background: "var(--tg-surface-2)", border: "1px solid var(--tg-border)" }}>
           No live reports to show right now.
         </p>
       )}
@@ -82,8 +82,8 @@ export default function LiveFeed({
               className={`rounded-xl p-3 ${item.isLive ? "fresh-ring" : ""}`}
               style={
                 item.isLive
-                  ? { overflow: "hidden" }
-                  : { background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)", overflow: "hidden" }
+                  ? { overflow: "hidden", border: "1px solid transparent" }
+                  : { background: "var(--tg-surface-2)", border: "1px solid var(--tg-border)", overflow: "hidden" }
               }
             >
               <div className="flex items-center justify-between gap-2 mb-1">
@@ -91,12 +91,12 @@ export default function LiveFeed({
                   <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: DOT[item.riskLevel] }} />
                   {item.riskLevel}
                 </span>
-                <span className="text-xs tabular-nums" style={{ color: "rgba(255,255,255,0.35)" }}>
+                <span className="text-xs tabular-nums" style={{ color: "var(--tg-text-3)" }}>
                   {item.isLive ? "just now" : relativeTime(item.reportedAt)}
                 </span>
               </div>
-              <p className="text-xs truncate" style={{ color: "rgba(255,255,255,0.7)" }}>{item.excerpt}</p>
-              <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.35)" }}>{item.handle}</p>
+              <p className="text-xs truncate" style={{ color: "var(--tg-text-2)" }}>{item.excerpt}</p>
+              <p className="text-xs mt-0.5" style={{ color: "var(--tg-text-3)" }}>{item.handle}</p>
             </motion.div>
           ))}
         </AnimatePresence>

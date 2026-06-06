@@ -5,7 +5,7 @@ import HomeSections from "@/components/HomeSections"
 
 export default function HomePage() {
   return (
-    <div style={{ background: "hsl(240,28%,3.5%)", minHeight: "100dvh" }}>
+    <div style={{ background: "var(--tg-bg)", minHeight: "100dvh" }}>
       <Navbar />
       <HeroSection />
       <HomeSections />

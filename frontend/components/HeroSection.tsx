@@ -37,7 +37,7 @@ export default function HeroSection() {
   return (
     <section
       className="relative flex flex-col items-center justify-center overflow-hidden px-6"
-      style={{ minHeight: "100dvh", paddingTop: "7rem", paddingBottom: "3rem", background: "hsl(240,28%,3.5%)" }}
+      style={{ minHeight: "100dvh", paddingTop: "7rem", paddingBottom: "3rem", background: "var(--tg-bg)" }}
     >
       <PremiumBackground teal glow />
 
@@ -57,13 +57,13 @@ export default function HeroSection() {
           variants={fadeUpItem}
           className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6 text-xs font-medium select-none"
           style={{
-            background: "rgba(16,185,129,0.10)",
-            border: "1px solid rgba(16,185,129,0.28)",
-            color: "hsl(160,70%,72%)",
+            background: "var(--tg-accent-tint)",
+            border: "1px solid var(--tg-accent-border)",
+            color: "var(--tg-accent-soft-text)",
             backdropFilter: "blur(8px)",
           }}
         >
-          <span className="live-dot inline-block w-1.5 h-1.5 rounded-full" style={{ background: "hsl(150,90%,60%)" }} />
+          <span className="live-dot inline-block w-1.5 h-1.5 rounded-full" style={{ background: "var(--tg-accent-bright)" }} />
           AI scam-investigation agent · grounded in MongoDB Atlas
         </motion.div>
 
@@ -77,7 +77,7 @@ export default function HeroSection() {
               <span key={`l-${i}`} style={{ display: "inline-block", overflow: "hidden", verticalAlign: "top" }}>
                 <motion.span
                   variants={wordReveal}
-                  style={{ display: "inline-block", color: "rgba(255,255,255,0.55)", fontWeight: 300 }}
+                  style={{ display: "inline-block", color: "var(--tg-text-2)", fontWeight: 300 }}
                 >
                   {w}
                 </motion.span>
@@ -90,11 +90,11 @@ export default function HeroSection() {
                   variants={wordReveal}
                   style={{
                     display: "inline-block",
-                    background: "linear-gradient(110deg, #6ee7b7 0%, #10b981 45%, #2dd4bf 100%)",
+                    background: "var(--tg-hero-gradient)",
                     WebkitBackgroundClip: "text",
                     backgroundClip: "text",
                     color: "transparent",
-                    textShadow: "0 0 60px rgba(16,185,129,0.35)",
+                    textShadow: "0 0 60px var(--tg-accent-glow)",
                   }}
                 >
                   {w}
@@ -112,7 +112,7 @@ export default function HeroSection() {
           style={{
             maxWidth: "640px",
             fontSize: "clamp(0.9rem,1.4vw,1.1rem)",
-            color: "rgba(255,255,255,0.62)",
+            color: "var(--tg-text-2)",
             lineHeight: 1.6,
           }}
         >
@@ -126,10 +126,11 @@ export default function HeroSection() {
         <motion.div variants={fadeUpItem} className="flex flex-wrap items-center justify-center gap-3">
           <MagneticButton
             onClick={() => router.push("/investigate")}
-            className="group relative inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-sm text-white cursor-pointer"
+            className="group relative inline-flex items-center gap-2 px-7 py-3.5 rounded-xl font-semibold text-sm cursor-pointer"
             style={{
-              background: "linear-gradient(180deg, hsl(160,84%,42%), hsl(168,80%,34%))",
-              boxShadow: "0 8px 30px rgba(16,185,129,0.32)",
+              background: "linear-gradient(180deg, var(--tg-accent), var(--tg-accent-2))",
+              color: "var(--tg-on-accent)",
+              boxShadow: "0 8px 30px var(--tg-accent-glow)",
             }}
             ariaLabel="Check a listing"
           >
@@ -141,13 +142,13 @@ export default function HeroSection() {
             href="#how"
             className="inline-flex items-center gap-1.5 px-7 py-3.5 rounded-xl font-medium text-sm cursor-pointer transition-all duration-200"
             style={{
-              background: "rgba(255,255,255,0.04)",
-              color: "rgba(255,255,255,0.8)",
-              border: "1px solid rgba(255,255,255,0.12)",
+              background: "var(--tg-surface-2)",
+              color: "var(--tg-text)",
+              border: "1px solid var(--tg-border-strong)",
               backdropFilter: "blur(8px)",
             }}
-            onMouseEnter={e => (e.currentTarget.style.background = "rgba(255,255,255,0.09)")}
-            onMouseLeave={e => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")}
+            onMouseEnter={e => (e.currentTarget.style.background = "var(--tg-surface-3)")}
+            onMouseLeave={e => (e.currentTarget.style.background = "var(--tg-surface-2)")}
           >
             How it works
           </a>
@@ -157,10 +158,10 @@ export default function HeroSection() {
         <motion.div variants={fadeUpItem} className="mt-7 flex justify-center">
           <div
             className="inline-flex items-center gap-2.5 rounded-full px-4 py-2"
-            style={{ background: "rgba(16,185,129,0.08)", border: "1px solid rgba(16,185,129,0.22)" }}
+            style={{ background: "var(--tg-accent-tint)", border: "1px solid var(--tg-accent-border)" }}
           >
-            <span className="text-lg font-bold font-display" style={{ color: "hsl(150,85%,62%)" }}>{recallPct}%</span>
-            <span className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
+            <span className="text-lg font-bold font-display" style={{ color: "var(--tg-accent)" }}>{recallPct}%</span>
+            <span className="text-xs" style={{ color: "var(--tg-text-2)" }}>
               of seeded scams caught in evaluation
             </span>
           </div>
@@ -177,9 +178,9 @@ export default function HeroSection() {
                 transition={{ delay: reduced ? 0 : 0.9 + i * 0.08, duration: 0.45, ease: EASE_OUT }}
                 className="text-xs px-2.5 py-1 rounded-full"
                 style={{
-                  background: "rgba(255,255,255,0.04)",
-                  border: "1px solid rgba(255,255,255,0.08)",
-                  color: "rgba(255,255,255,0.5)",
+                  background: "var(--tg-surface-2)",
+                  border: "1px solid var(--tg-border)",
+                  color: "var(--tg-text-3)",
                   letterSpacing: "0.02em",
                 }}
               >
@@ -187,7 +188,7 @@ export default function HeroSection() {
               </motion.span>
             ))}
           </div>
-          <p className="flex items-center gap-1.5" style={{ color: "rgba(255,255,255,0.26)", fontSize: "0.7rem" }}>
+          <p className="flex items-center gap-1.5" style={{ color: "var(--tg-text-faint)", fontSize: "0.7rem" }}>
             <Sparkles size={11} strokeWidth={2} style={{ opacity: 0.6 }} />
             Decision-support only, not a guarantee — verify independently. · Synthetic demo data.
           </p>

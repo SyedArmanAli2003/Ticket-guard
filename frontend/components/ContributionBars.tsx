@@ -19,8 +19,8 @@ export default function ContributionBars({
   // no contribution for this chip). Render nothing rather than a fake 0% bar.
   if (vector < 0 || text < 0) return null
   const rows = [
-    { label: "vector", val: vector, color: "rgb(125,211,252)", bg: "rgba(14,165,233,0.16)" },
-    { label: "text", val: text, color: "rgb(74,222,128)", bg: "rgba(34,197,94,0.16)" },
+    { label: "vector", val: vector, color: "var(--tg-info)", bg: "var(--tg-info-tint)" },
+    { label: "text", val: text, color: "var(--tg-green)", bg: "var(--tg-green-tint)" },
   ]
   return (
     <div className={compact ? "space-y-1" : "space-y-1.5"} style={{ minWidth: compact ? 96 : 132 }}>
@@ -30,11 +30,11 @@ export default function ContributionBars({
           <div key={r.label} className="flex items-center gap-2">
             <span
               className="uppercase tracking-wider flex-shrink-0"
-              style={{ color: "rgba(255,255,255,0.4)", fontSize: compact ? "0.55rem" : "0.6rem", width: compact ? 30 : 34 }}
+              style={{ color: "var(--tg-text-3)", fontSize: compact ? "0.55rem" : "0.6rem", width: compact ? 30 : 34 }}
             >
               {r.label}
             </span>
-            <div className="flex-1 rounded-full overflow-hidden" style={{ height: compact ? 4 : 5, background: "rgba(255,255,255,0.07)" }}>
+            <div className="flex-1 rounded-full overflow-hidden" style={{ height: compact ? 4 : 5, background: "var(--tg-track-2)" }}>
               <motion.div
                 className="h-full rounded-full"
                 style={{ background: r.color, boxShadow: `0 0 8px ${r.bg}` }}

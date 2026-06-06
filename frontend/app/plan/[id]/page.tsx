@@ -11,17 +11,17 @@ export const metadata: Metadata = {
 
 export default function PlanPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center px-6" style={{ background: "hsl(240,25%,4%)" }}>
+    <div className="min-h-screen flex items-center justify-center px-6" style={{ background: "var(--tg-bg)" }}>
       <div className="text-center max-w-md">
-        <p className="text-white text-xl font-semibold mb-2">Running in demo mode</p>
-        <p className="text-sm mb-6" style={{ color: "rgba(255,255,255,0.5)", lineHeight: 1.6 }}>
+        <p className="text-xl font-semibold mb-2" style={{ color: "var(--tg-text)" }}>Running in demo mode</p>
+        <p className="text-sm mb-6" style={{ color: "var(--tg-text-2)", lineHeight: 1.6 }}>
           TicketGuard is running on self-contained synthetic data with no backend,
           so saved records aren&rsquo;t available. Try a live investigation instead.
         </p>
         <Link
           href="/investigate"
-          className="inline-block px-6 py-3 rounded-xl font-semibold text-sm text-white"
-          style={{ background: "linear-gradient(180deg, hsl(160,84%,42%), hsl(168,80%,34%))" }}
+          className="inline-block px-6 py-3 rounded-xl font-semibold text-sm"
+          style={{ background: "linear-gradient(180deg, var(--tg-accent), var(--tg-accent-2))", color: "var(--tg-on-accent)" }}
         >
           Check a listing →
         </Link>

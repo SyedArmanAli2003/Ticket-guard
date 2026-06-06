@@ -72,8 +72,8 @@ export default function ShieldMark() {
             fill="rgba(8,20,18,0.55)" stroke="rgba(110,231,183,0.45)" strokeWidth="1.4" />
           <line x1="60" y1="51" x2="60" y2="75" stroke="rgba(110,231,183,0.5)"
             strokeWidth="1.4" strokeDasharray="2 3" />
-          <circle cx="60" cy="50" r="3" fill="hsl(240,28%,3.5%)" stroke="rgba(110,231,183,0.45)" strokeWidth="1.2" />
-          <circle cx="60" cy="76" r="3" fill="hsl(240,28%,3.5%)" stroke="rgba(110,231,183,0.45)" strokeWidth="1.2" />
+          <circle cx="60" cy="50" r="3" fill="var(--tg-bg)" stroke="rgba(110,231,183,0.45)" strokeWidth="1.2" />
+          <circle cx="60" cy="76" r="3" fill="var(--tg-bg)" stroke="rgba(110,231,183,0.45)" strokeWidth="1.2" />
           {/* tiny barcode on the left stub */}
           <g stroke="rgba(110,231,183,0.6)" strokeWidth="1.2">
             <line x1="41" y1="57" x2="41" y2="69" />
