@@ -338,7 +338,7 @@ function InvestigateContent() {
   )
 
   return (
-    <div style={{ background: "var(--tg-bg)", minHeight: "100vh" }}>
+    <div style={{ backgroundColor: "var(--tg-bg)", minHeight: "100vh" }}>
       <Navbar />
 
       {/* mock-mode watermark — corner badge complements the Navbar DEMO chip */}
@@ -594,7 +594,7 @@ function InvestigateContent() {
 
 export default function InvestigatePage() {
   return (
-    <Suspense fallback={<div style={{ background: "var(--tg-bg)", minHeight: "100vh" }} />}>
+    <Suspense fallback={<div style={{ backgroundColor: "var(--tg-bg)", minHeight: "100vh" }} />}>
       <InvestigateContent />
     </Suspense>
   )

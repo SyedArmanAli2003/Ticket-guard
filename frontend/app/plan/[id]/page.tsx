@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function PlanPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center px-6" style={{ background: "var(--tg-bg)" }}>
+    <div className="min-h-screen flex items-center justify-center px-6" style={{ backgroundColor: "var(--tg-bg)" }}>
       <div className="text-center max-w-md">
         <p className="text-xl font-semibold mb-2" style={{ color: "var(--tg-text)" }}>Running in demo mode</p>
         <p className="text-sm mb-6" style={{ color: "var(--tg-text-2)", lineHeight: 1.6 }}>

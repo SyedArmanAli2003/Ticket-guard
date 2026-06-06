@@ -14,7 +14,7 @@ function RedirectInner() {
   }, [router, searchParams])
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: "var(--tg-bg)" }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: "var(--tg-bg)" }}>
       <p className="text-sm" style={{ color: "var(--tg-text-3)" }}>Redirecting to TicketGuard…</p>
     </div>
   )
@@ -22,7 +22,7 @@ function RedirectInner() {
 
 export default function GeneratePage() {
   return (
-    <Suspense fallback={<div style={{ background: "var(--tg-bg)", minHeight: "100vh" }} />}>
+    <Suspense fallback={<div style={{ backgroundColor: "var(--tg-bg)", minHeight: "100vh" }} />}>
       <RedirectInner />
     </Suspense>
   )

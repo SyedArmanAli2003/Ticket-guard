@@ -196,13 +196,26 @@
    NOTE: do NOT set height:100% on html/body — that forces the <body> to become
    the scroll container, which stops window.scrollY from ever changing (the nav
    then never gets its solid background and overlaps page content). We let the
-   document be the natural scroll root and use min-height instead. */
+   document be the natural scroll root and use min-height instead.
+
+   IMPORTANT: Use background-color (not the background shorthand) on html + body
+   so that:
+   1. The html canvas never shows a browser-painted dark swatch when color-scheme
+      flips — without an explicit background-color the UA paints the canvas itself.
+   2. The longhand resolves and transitions correctly when the custom property
+      --tg-bg changes across the :root / .light boundary; the background shorthand
+      can leave the background-color sub-property stale on some Chrome builds. */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { overflow-x: hidden; scroll-behavior: smooth; }
+html {
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+  /* Anchor the canvas colour so the UA never fills it from color-scheme alone */
+  background-color: var(--tg-bg);
+}
 body {
   min-height: 100dvh;
   overflow-x: hidden;
-  background: var(--tg-bg);
+  background-color: var(--tg-bg);
   color: var(--tg-text);
   font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;

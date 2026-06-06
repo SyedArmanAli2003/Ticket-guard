@@ -25,7 +25,7 @@ export default function InvestigateError({
   }, [error])
 
   return (
-    <div style={{ background: "var(--tg-bg)", minHeight: "100vh" }}>
+    <div style={{ backgroundColor: "var(--tg-bg)", minHeight: "100vh" }}>
       <Navbar />
       <div className="max-w-2xl mx-auto px-6 pt-40 pb-20 text-center">
         <motion.div

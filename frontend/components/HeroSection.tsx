@@ -37,7 +37,7 @@ export default function HeroSection() {
   return (
     <section
       className="relative flex flex-col items-center justify-center overflow-hidden px-6"
-      style={{ minHeight: "100dvh", paddingTop: "7rem", paddingBottom: "3rem", background: "var(--tg-bg)" }}
+      style={{ minHeight: "100dvh", paddingTop: "7rem", paddingBottom: "3rem", backgroundColor: "var(--tg-bg)" }}
     >
       <PremiumBackground teal glow />
 

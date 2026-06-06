@@ -88,7 +88,7 @@ export default function HomeSections() {
   const reduced = usePrefersReducedMotion()
 
   return (
-    <div style={{ background: "var(--tg-bg)" }}>
+    <div style={{ backgroundColor: "var(--tg-bg)" }}>
       {/* ── How it works ───────────────────────────────────────────────── */}
       <section id="how" className="relative max-w-5xl mx-auto px-6 py-20 scroll-mt-24">
         <motion.p

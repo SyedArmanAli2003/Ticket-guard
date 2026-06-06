@@ -15,7 +15,7 @@ function SkeletonLine({ w = "100%", h = 14 }: { w?: string; h?: number }) {
 
 export default function InvestigateLoading() {
   return (
-    <div style={{ background: "var(--tg-bg)", minHeight: "100vh" }}>
+    <div style={{ backgroundColor: "var(--tg-bg)", minHeight: "100vh" }}>
       <Navbar />
       <div className="max-w-6xl mx-auto px-6 pt-28 pb-20">
         <div className="grid lg:grid-cols-[1fr_320px] gap-6 items-start">
