@@ -9,6 +9,10 @@ import RiskCard from "@/components/RiskCard"
 import ChatPanel from "@/components/ChatPanel"
 import LiveFeed from "@/components/LiveFeed"
 import HealthStrip from "@/components/HealthStrip"
+import Footer from "@/components/Footer"
+import { useAuth } from "@/components/AuthProvider"
+import { addHistoryEntry } from "@/lib/history"
+import { getAuth } from "@/lib/auth"
 import type {
   AgentStep,
   ToolSource,
@@ -28,7 +32,7 @@ import {
   seedFeed,
   feedItemFromInvestigation,
 } from "@/lib/mock"
-import { getMode } from "@/lib/config"
+import { getMode, API } from "@/lib/config"
 import { getHealth, investigateStream, postReport, openFeed, fileToDataUri } from "@/lib/api"
 import {
   freshRealSteps,
@@ -66,6 +70,7 @@ function InvestigateContent() {
   const mode = getMode()
   const isReal = mode === "real"
   const isMock = mode === "mock"
+  const { user } = useAuth()
 
   // ── shared UI state ──
   const [ingest, setIngest] = useState<IngestKind>("text")
@@ -151,7 +156,28 @@ function InvestigateContent() {
     }
     if (runId.current !== id) return
     setResult(inv); setIsRunning(false)
-  }, [])
+    // Save history — MongoDB first, localStorage fallback
+    const histEntry = {
+      userId: user?.id ?? null,
+      query: input,
+      queryType: "text" as const,
+      verdict: inv.riskLevel,
+      score: inv.riskScore,
+      rationale: inv.rationale,
+    }
+    addHistoryEntry(histEntry) // always save locally
+    if (user?.id && isReal) {
+      const { token } = getAuth()
+      fetch(API.historySave(), {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify({ ...histEntry, user_id: user.id, query_type: "text" }),
+      }).catch(() => { /* best-effort */ })
+    }
+  }, [user, isReal])
 
   // ── REAL runner: consume the SSE stream, map frames → steps + verdict ──
   const runReal = useCallback(async (body: InvestigateRequestBody, recapText: string) => {
@@ -188,6 +214,36 @@ function InvestigateContent() {
         }
         setResult(buildInvestigation(realAcc.current, recapText))
         setIsRunning(false)
+        // Save history — MongoDB first, localStorage fallback
+        const builtInv = buildInvestigation(realAcc.current, recapText)
+        const qType: "text" | "url" | "file" =
+          body && (body as {type:string}).type === "url" ? "url"
+          : body && ((body as {type:string}).type === "image" || (body as {type:string}).type === "pdf") ? "file"
+          : "text"
+        const histEntry = {
+          userId: user?.id ?? null,
+          query: recapText,
+          queryType: qType,
+          verdict: builtInv.riskLevel,
+          score: builtInv.riskScore,
+          rationale: builtInv.rationale,
+          investigationId: realAcc.current.investigationId,
+        }
+        addHistoryEntry(histEntry) // always save locally
+        if (user?.id) {
+          const { token } = getAuth()
+          fetch(API.historySave(), {
+            method: "POST",
+            headers: { 
+              "Content-Type": "application/json",
+              ...(token ? { "Authorization": `Bearer ${token}` } : {})
+            },
+            body: JSON.stringify({
+              ...histEntry, user_id: user.id, query_type: qType,
+              investigation_id: realAcc.current.investigationId,
+            }),
+          }).catch(() => { /* best-effort */ })
+        }
         return
       }
       // per-step
@@ -240,7 +296,7 @@ function InvestigateContent() {
       setRunError(e instanceof Error ? e.message : "Investigation request failed.")
       setIsRunning(false)
     }
-  }, [])
+  }, [user])
 
   // ── unified submit ──
   const submit = useCallback(async () => {
@@ -263,6 +319,18 @@ function InvestigateContent() {
       )
     }
   }, [isRunning, isMock, isReal, ingest, text, url, file, runMock, runReal])
+
+  // ── ?q= URL param (deep-link a query, e.g. from history "re-run") ──
+  useEffect(() => {
+    const q = searchParams.get("q")
+    if (q && text !== q) {
+      setIngest("text")
+      setText(q)
+      if (isMock) runMock(q)
+      else if (isReal) runReal({ type: "text", text: q }, q)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, isMock, isReal, text, runMock, runReal])
 
   // ── deep links (?demo=true / ?example=<id>) — only meaningful with text input ──
   useEffect(() => {
@@ -590,6 +658,7 @@ function InvestigateContent() {
           </aside>
         </div>
       </div>
+      <Footer />
     </div>
   )
 }

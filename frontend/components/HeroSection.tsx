@@ -60,7 +60,6 @@ export default function HeroSection() {
             background: "var(--tg-accent-tint)",
             border: "1px solid var(--tg-accent-border)",
             color: "var(--tg-accent-soft-text)",
-            backdropFilter: "blur(8px)",
           }}
         >
           <span className="live-dot inline-block w-1.5 h-1.5 rounded-full" style={{ background: "var(--tg-accent-bright)" }} />
@@ -145,7 +144,6 @@ export default function HeroSection() {
               background: "var(--tg-surface-2)",
               color: "var(--tg-text)",
               border: "1px solid var(--tg-border-strong)",
-              backdropFilter: "blur(8px)",
             }}
             onMouseEnter={e => (e.currentTarget.style.background = "var(--tg-surface-3)")}
             onMouseLeave={e => (e.currentTarget.style.background = "var(--tg-surface-2)")}

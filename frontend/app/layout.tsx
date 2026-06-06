@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Space_Grotesk, Inter } from "next/font/google"
 import "./globals.css"
 import ThemeProvider from "@/components/ThemeProvider"
+import { AuthProvider } from "@/components/AuthProvider"
 
 // Distinctive display face for headings + technical chrome.
 const display = Space_Grotesk({
@@ -43,7 +44,9 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

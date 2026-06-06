@@ -725,7 +725,156 @@ def init_db() -> None:
             [("created_at", DESCENDING)], name="inv_recent")
         db[config.COLL_TICKETS_SEEN].create_index(
             [("hash", ASCENDING)], unique=True, name="ticket_hash_unique")
+        # User auth indexes
+        db[config.COLL_USERS].create_index(
+            [("email", ASCENDING)], unique=True, name="users_email_unique")
+        # User history indexes: fetch by user fast, sorted by time
+        db[config.COLL_USER_HISTORY].create_index(
+            [("user_id", ASCENDING), ("created_at", DESCENDING)], name="history_user_time")
         print(f"✅ MongoDB ready (version={_status['cluster_version']}, "
               f"rankfusion_capable={_status['rankfusion_capable']})")
     except Exception as exc:  # noqa: BLE001
         print(f"❌ MongoDB init error: {exc}")
+
+
+# --------------------------------------------------------------------------- #
+# User auth (register / login) — password hashed with hashlib sha256 + salt
+# --------------------------------------------------------------------------- #
+import secrets as _secrets  # noqa: E402 — stdlib, fine to import here
+
+def _hash_password(password: str, salt: str | None = None) -> tuple[str, str]:
+    """Return (hashed, salt). Uses SHA-256 + random salt (no bcrypt dep needed)."""
+    if salt is None:
+        salt = _secrets.token_hex(16)
+    hashed = hashlib.sha256(f"{salt}{password}".encode()).hexdigest()
+    return hashed, salt
+
+
+def register_user(name: str, email: str, password: str, role: str = "user") -> dict:
+    """Register a new user. Returns {status, user} or {status, error}."""
+    db = _get_db()
+    if db is None:
+        return {"status": "not_configured", "error": "db_unavailable"}
+    if len(password) < 6:
+        return {"status": "error", "error": "Password must be at least 6 characters."}
+    hashed, salt = _hash_password(password)
+    user_id = f"user-{_secrets.token_hex(8)}"
+    doc = {
+        "user_id": user_id,
+        "email": email.lower().strip(),
+        "name": name.strip(),
+        "role": role,
+        "password_hash": hashed,
+        "password_salt": salt,
+        "created_at": datetime.now(timezone.utc),
+    }
+    try:
+        db[config.COLL_USERS].insert_one(doc)
+        return {"status": "ok", "user": {
+            "id": user_id, "email": doc["email"], "name": doc["name"],
+            "role": doc["role"], "createdAt": doc["created_at"].isoformat(),
+        }}
+    except Exception as exc:  # noqa: BLE001
+        msg = str(exc)
+        if "E11000" in msg or "duplicate" in msg.lower():
+            return {"status": "error", "error": "An account with this email already exists."}
+        return {"status": "error", "error": "Registration failed. Please try again."}
+
+
+def login_user(email: str, password: str) -> dict:
+    """Verify credentials. Returns {status, user} or {status, error}."""
+    db = _get_db()
+    if db is None:
+        return {"status": "not_configured", "error": "db_unavailable"}
+    doc = db[config.COLL_USERS].find_one({"email": email.lower().strip()}, {"_id": 0})
+    if not doc:
+        return {"status": "error", "error": "Invalid email or password."}
+    hashed, _ = _hash_password(password, doc.get("password_salt", ""))
+    if hashed != doc.get("password_hash", ""):
+        return {"status": "error", "error": "Invalid email or password."}
+    return {"status": "ok", "user": {
+        "id": doc["user_id"], "email": doc["email"], "name": doc["name"],
+        "role": doc.get("role", "user"),
+        "createdAt": doc["created_at"].isoformat() if isinstance(doc.get("created_at"), datetime) else "",
+    }}
+
+
+def get_all_users() -> list[dict] | None:
+    """List all registered users (admin utility). Returns None if DB unavailable."""
+    db = _get_db()
+    if db is None:
+        return None
+    try:
+        docs = list(db[config.COLL_USERS].find({}, {"password_hash": 0}).sort("created_at", DESCENDING))
+        for d in docs:
+            d["id"] = str(d.pop("_id"))
+            if isinstance(d.get("created_at"), datetime):
+                d["created_at"] = d["created_at"].isoformat()
+        return docs
+    except Exception:
+        return None
+
+
+# --------------------------------------------------------------------------- #
+# User history — persistent per-user investigation log in MongoDB
+# --------------------------------------------------------------------------- #
+def save_user_history(entry: dict) -> str:
+    """Save a history entry. entry must include user_id, query, verdict, score, rationale, query_type."""
+    db = _get_db()
+    if db is None:
+        return "no-db"
+    try:
+        doc = dict(entry)
+        doc["created_at"] = datetime.now(timezone.utc)
+        doc.setdefault("user_id", "anonymous")
+        return str(db[config.COLL_USER_HISTORY].insert_one(doc).inserted_id)
+    except Exception:  # noqa: BLE001
+        return "no-db"
+
+
+def get_user_history(user_id: str, limit: int = 50) -> list[dict] | None:
+    """Fetch history for a specific user, newest first. Returns None if DB unavailable."""
+    db = _get_db()
+    if db is None:
+        return None
+    try:
+        docs = list(
+            db[config.COLL_USER_HISTORY]
+            .find({"user_id": user_id}, {"password_hash": 0})
+            .sort("created_at", DESCENDING)
+            .limit(limit)
+        )
+        for d in docs:
+            if "_id" in d:
+                d["entry_id"] = str(d.pop("_id"))
+            if isinstance(d.get("created_at"), datetime):
+                d["created_at"] = d["created_at"].isoformat()
+        return docs
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def delete_history_entry(entry_id: str, user_id: str) -> bool:
+    """Delete a single history entry (only if it belongs to the requesting user)."""
+    db = _get_db()
+    if db is None or not ObjectId.is_valid(entry_id):
+        return False
+    try:
+        res = db[config.COLL_USER_HISTORY].delete_one(
+            {"_id": ObjectId(entry_id), "user_id": user_id}
+        )
+        return res.deleted_count > 0
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def clear_user_history(user_id: str) -> int:
+    """Delete all history for a user. Returns count of deleted docs."""
+    db = _get_db()
+    if db is None:
+        return 0
+    try:
+        res = db[config.COLL_USER_HISTORY].delete_many({"user_id": user_id})
+        return res.deleted_count
+    except Exception:  # noqa: BLE001
+        return 0

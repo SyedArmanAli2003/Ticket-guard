@@ -58,6 +58,8 @@ COLL_REPORTS = "reports"             # user-submitted scam reports (change-strea
 COLL_INVESTIGATIONS = "investigations"  # persisted investigation results
 COLL_RULES = "official_rules"        # official-transfer rule engine knowledge
 COLL_CONVERSATIONS = "conversations"  # multi-turn follow-up memory over an investigation
+COLL_USERS = "users"                 # registered users (email + hashed password)
+COLL_USER_HISTORY = "user_history"   # per-user investigation history (query, verdict, score, rationale)
 
 # Atlas Search indexes.
 VECTOR_INDEX = "scam_vector_index"   # $vectorSearch over scam_corpus.embedding
