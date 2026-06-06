@@ -609,7 +609,11 @@ async def watch_reports() -> AsyncIterator[dict]:
                 serverSelectionTimeoutMS=6000,
             )
         coll = _async_client[config.MONGODB_DB][config.COLL_REPORTS]
-        async with coll.watch(full_document="updateLookup") as stream:
+        # AsyncMongoClient.watch() is a coroutine returning an async change stream;
+        # it must be awaited before entering the async context manager.
+        async with await coll.watch(
+            [{"$match": {"operationType": "insert"}}], full_document="updateLookup"
+        ) as stream:
             async for change in stream:
                 if change.get("operationType") != "insert":
                     continue
