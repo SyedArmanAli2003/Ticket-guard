@@ -14,7 +14,7 @@ python-dotenv==1.0.0
 pypdf==5.1.0
 beautifulsoup4==4.12.3
 httpx==0.28.1
-pillow==11.0.0
+pillow>=11.2.1
 # Optional native barcode/QR decode; ingest.py degrades gracefully if absent
 # (falls back to Gemini reading visible digits). Pinned to a version with wheels.
-zxing-cpp==3.0.0
+zxing-cpp>=2.2.1

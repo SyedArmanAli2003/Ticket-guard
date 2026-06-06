@@ -31,6 +31,9 @@ import time
 from datetime import datetime, timezone
 from pathlib import Path
 
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")  # Windows console emoji safety
+
 # Allow running as `python scripts/setup_atlas.py` from the backend dir.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 

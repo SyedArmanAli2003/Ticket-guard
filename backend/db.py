@@ -489,32 +489,25 @@ def score_signals(signals: list[dict]) -> dict:
     if not signals:
         return {"status": "ok", "score": 0, "band": "LOW", "by_severity": [], "n_signals": 0}
     try:
-        pipeline = [
-            {"$documents": signals},
-            {"$addFields": {
-                "severity": {"$switch": {"branches": [
-                    {"case": {"$gte": ["$weight", 30]}, "then": "high"},
-                    {"case": {"$gte": ["$weight", 15]}, "then": "medium"},
-                ], "default": "low"}},
-            }},
-            {"$facet": {
-                "total": [{"$group": {"_id": None, "score": {"$sum": "$weight"},
-                                      "n": {"$sum": 1}}}],
-                "by_severity": [{"$group": {"_id": "$severity", "count": {"$sum": 1},
-                                            "weight": {"$sum": "$weight"}}},
-                               {"$sort": {"weight": -1}}],
-            }},
-        ]
-        # $documents must run on a database (no collection needed); use admin-safe coll.
-        res = list(db[config.COLL_CORPUS].aggregate(pipeline))
-        facet = res[0] if res else {"total": [], "by_severity": []}
-        total = facet["total"][0]["score"] if facet["total"] else 0
-        n = facet["total"][0]["n"] if facet["total"] else 0
-        score = min(100, int(total))
+        # NOTE: $documents (virtual collection) is unsupported on Atlas M0 free tier.
+        # We compute the identical scoring logic in Python — same weights, same bands,
+        # same output shape. MongoDB remains the data layer for all other steps.
+        total_weight = 0
+        by_severity: dict[str, dict] = {}
+        for sig in signals:
+            w = int(sig.get("weight", 0))
+            total_weight += w
+            sev = "high" if w >= 30 else "medium" if w >= 15 else "low"
+            if sev not in by_severity:
+                by_severity[sev] = {"severity": sev, "count": 0, "weight": 0}
+            by_severity[sev]["count"] += 1
+            by_severity[sev]["weight"] += w
+
+        score = min(100, total_weight)
         band = "HIGH" if score >= 60 else "MEDIUM" if score >= 30 else "LOW"
-        return {"status": "ok", "score": score, "band": band, "n_signals": n,
-                "by_severity": [{"severity": r["_id"], "count": r["count"],
-                                 "weight": r["weight"]} for r in facet["by_severity"]]}
+        severity_list = sorted(by_severity.values(), key=lambda x: x["weight"], reverse=True)
+        return {"status": "ok", "score": score, "band": band, "n_signals": len(signals),
+                "by_severity": severity_list}
     except Exception as exc:  # noqa: BLE001
         return {"status": "not_configured", "reason": str(exc)[:120]}
 
