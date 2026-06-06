@@ -57,6 +57,7 @@ export const API = {
   investigate: () => `${apiBase()}/api/investigate`,
   check: () => `${apiBase()}/api/check`,
   report: () => `${apiBase()}/api/report`,
+  chat: () => `${apiBase()}/api/chat`,
   feed: () => `${apiBase()}/api/feed`,
   health: () => `${apiBase()}/api/health`,
   mcpInfo: () => `${apiBase()}/api/mcp/info`,

@@ -6,6 +6,7 @@ import { Sparkles, ArrowRight, ArrowLeft, Search, Upload, Link2, FileText, Alert
 import Navbar from "@/components/Navbar"
 import InvestigationStep from "@/components/InvestigationStep"
 import RiskCard from "@/components/RiskCard"
+import ChatPanel from "@/components/ChatPanel"
 import LiveFeed from "@/components/LiveFeed"
 import HealthStrip from "@/components/HealthStrip"
 import type {
@@ -566,6 +567,7 @@ function InvestigateContent() {
                   {result && !isRunning && (
                     <motion.div className="mt-5" initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                       <RiskCard investigation={result} onReport={handleReport} reported={reported} />
+                      <ChatPanel investigation={result} mode={mode} investigationId={isReal ? realAcc.current.investigationId : undefined} />
                     </motion.div>
                   )}
                 </AnimatePresence>
