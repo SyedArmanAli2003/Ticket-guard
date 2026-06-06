@@ -27,8 +27,10 @@ from google.genai import types
 import config
 import db
 import ingest
+import models_registry as registry
 from agent import (
     build_agents,
+    build_verdict_agent,
     official_transfer_rules,
     signals_from_forgery,
     signals_from_reputation,
@@ -37,24 +39,34 @@ from agent import (
 
 APP = "ticketguard"
 
-_normalizer = None
-_verdict_writer = None
 _mcp = None
-_runners: dict[str, InMemoryRunner] = {}
+_initialized = False
+_verdict_runners: dict[str, InMemoryRunner] = {}
 
 
 def init_runner() -> None:
-    """Build the two Gemini agents + MCP toolset once. Safe to call repeatedly."""
-    global _normalizer, _verdict_writer, _mcp, _runners
-    if _runners:
+    """Build the MCP toolset + the default verdict runner once. Safe to call repeatedly."""
+    global _mcp, _initialized
+    if _initialized:
         return
+    # build_agents() also wires the read-only MongoDB MCP toolset surfaced by
+    # /api/health and /api/mcp/info. The verdict writer it returns is bound to the
+    # default Gemini model; per-request models get their own runner lazily.
     _normalizer, _verdict_writer, _mcp = build_agents()
-    _runners = {
-        "normalizer": InMemoryRunner(agent=_normalizer, app_name=APP),
-        "verdict": InMemoryRunner(agent=_verdict_writer, app_name=APP),
-    }
-    print(f"🛡️  TicketGuard ready — model={config.GEMINI_MODEL} "
-          f"backend={config.backend_label()} mcp={'on' if _mcp else 'off'}")
+    _verdict_runners[registry.DEFAULT_MODEL] = InMemoryRunner(agent=_verdict_writer, app_name=APP)
+    _initialized = True
+    print(f"🛡️  TicketGuard ready — models={list(registry.MODELS)} "
+          f"default={registry.DEFAULT_MODEL} backend={config.backend_label()} "
+          f"mcp={'on' if _mcp else 'off'}")
+
+
+def _verdict_runner(model_id: str) -> InMemoryRunner:
+    """Lazily build (and cache) an ADK verdict runner bound to a given Gemini model."""
+    runner = _verdict_runners.get(model_id)
+    if runner is None:
+        runner = InMemoryRunner(agent=build_verdict_agent(model_id), app_name=APP)
+        _verdict_runners[model_id] = runner
+    return runner
 
 
 def mcp_enabled() -> bool:
@@ -72,10 +84,22 @@ def _is_transient(err: Exception) -> bool:
                                 "500", "INTERNAL", "OVERLOADED", "DEADLINE"))
 
 
-async def _run_agent(key: str, step_no: int, message: str,
+# Errors that mean THIS Gemini model is exhausted/unavailable → fail over to the
+# next tier. A per-DAY quota is terminal for RETRYING the same model, but it is
+# exactly when we WANT to switch to a model with its own quota bucket.
+_FALLBACK_ERRORS = ("429", "RESOURCE_EXHAUSTED", "QUOTA", "PERDAY", "RATE",
+                    "503", "UNAVAILABLE", "OVERLOADED", "404", "NOT_FOUND",
+                    "NOT FOUND", "PERMISSION_DENIED")
+
+
+def _model_unavailable(reason: str) -> bool:
+    s = (reason or "").upper()
+    return any(t in s for t in _FALLBACK_ERRORS)
+
+
+async def _run_agent(runner: InMemoryRunner, step_no: int, message: str,
                      retries: int = 3) -> tuple[list[dict], str]:
     """Run one Gemini LlmAgent turn via ADK. Returns (tool_events, final_text)."""
-    runner = _runners[key]
     for attempt in range(retries):
         tools: list[dict] = []
         final_text = ""
@@ -111,7 +135,7 @@ def _heuristic_band(rule_out: dict, scorer: dict) -> str:
     return "HIGH" if rule_out.get("violates_official_transfer") else "LOW"
 
 
-async def run_investigation(source: dict):
+async def run_investigation(source: dict, model: str | None = None):
     """Async generator yielding SSE events for one full investigation.
 
     ``source`` is the already-ingested payload:
@@ -124,7 +148,7 @@ async def run_investigation(source: dict):
     # ----- Step 1: Normalizer (Gemini structured extraction) ----------------- #
     yield {"step": 1, "name": "Normalize Listing", "status": "running"}
     try:
-        listing_env = await _normalize(source)
+        listing_env = await _normalize(source, model)
     except Exception as exc:  # noqa: BLE001
         yield {"step": 1, "name": "Normalize Listing", "status": "error", "error": str(exc)[:200]}
         return
@@ -142,7 +166,8 @@ async def run_investigation(source: dict):
     evidence["ingest"] = {"source": listing_env.get("source"), "extracted": extracted}
     yield {"step": 1, "name": "Normalize Listing", "status": "complete",
            "data": {"listing": listing, "source": listing_env.get("source"),
-                    "extracted": extracted}}
+                    "extracted": extracted,
+                    "model_used": listing_env.get("model_used")}}
 
     # ----- Step 2: Hybrid Retrieval (Atlas vector + text, fused) ------------- #
     yield {"step": 2, "name": "Hybrid Retrieval", "status": "running"}
@@ -205,7 +230,7 @@ async def run_investigation(source: dict):
     # ----- Step 7: Verdict Writer (Gemini, grounded ONLY in evidence) -------- #
     yield {"step": 7, "name": "Verdict", "status": "running"}
     try:
-        verdict = await _write_verdict(evidence, _heuristic_band(rule_out, scorer))
+        verdict = await _write_verdict(evidence, _heuristic_band(rule_out, scorer), model)
     except Exception as exc:  # noqa: BLE001
         yield {"step": 7, "name": "Verdict", "status": "error", "error": str(exc)[:200]}
         return
@@ -214,6 +239,7 @@ async def run_investigation(source: dict):
 
     # ----- Step 8: Persist investigation ------------------------------------- #
     yield {"step": 8, "name": "Persist", "status": "running"}
+    used_model = verdict.get("model_used") or (model or registry.DEFAULT_MODEL)
     inv_doc = {
         "listing": listing,
         "source": listing_env.get("source"),
@@ -224,7 +250,9 @@ async def run_investigation(source: dict):
         "scorer": scorer,
         "rules": rule_out,
         "verdict": verdict,
-        "engine": f"{config.GEMINI_MODEL} · {config.backend_label()}",
+        "model_used": used_model,
+        "is_fallback": verdict.get("is_fallback", False),
+        "engine": f"{used_model} · {config.backend_label()}",
     }
     inv_id = await asyncio.to_thread(db.save_investigation, inv_doc)
     persist_status = "complete" if inv_id != "no-db" else "not_configured"
@@ -239,21 +267,23 @@ async def run_investigation(source: dict):
                     "confidence": verdict.get("confidence"),
                     "investigation_id": inv_id,
                     "risk_score": scorer.get("score") if scorer.get("status") == "ok" else None,
-                    "engine": f"{config.GEMINI_MODEL} · {config.backend_label()}"}}
+                    "model_used": used_model,
+                    "is_fallback": verdict.get("is_fallback", False),
+                    "engine": f"{used_model} · {config.backend_label()}"}}
 
 
 # --------------------------------------------------------------------------- #
 # Sync convenience: run the whole pipeline and return the final verdict bundle
 # (used by POST /api/check). Collects the stream, returns the assembled result.
 # --------------------------------------------------------------------------- #
-async def investigate_sync(source: dict) -> dict:
+async def investigate_sync(source: dict, model: str | None = None) -> dict:
     """Run the pipeline to completion and return a single JSON verdict bundle."""
     steps: list[dict] = []
     final: dict = {}
     listing: dict = {}
     verdict: dict = {}
     scorer: dict = {}
-    async for ev in run_investigation(source):
+    async for ev in run_investigation(source, model):
         if ev.get("type") == "tool":
             continue
         step = ev.get("step")
@@ -282,6 +312,8 @@ async def investigate_sync(source: dict) -> dict:
         "reasoning": verdict.get("reasoning", ""),
         "risk_score": final.get("risk_score"),
         "investigation_id": final.get("investigation_id"),
+        "model_used": final.get("model_used") or verdict.get("model_used"),
+        "is_fallback": final.get("is_fallback", verdict.get("is_fallback", False)),
         "steps": steps,
         "engine": final.get("engine"),
     }
@@ -290,20 +322,39 @@ async def investigate_sync(source: dict) -> dict:
 # --------------------------------------------------------------------------- #
 # Internals
 # --------------------------------------------------------------------------- #
-async def _normalize(source: dict) -> dict:
-    """Dispatch ingestion by source type (runs blocking IO in a thread)."""
+async def _normalize(source: dict, model: str | None = None) -> dict:
+    """Normalize the source, failing over to the next Gemini tier if the chosen
+    model is rate-limited/unavailable (so a step-1 quota error doesn't kill the run)."""
+    chain = registry.fallback_chain(model)
+    last = {"status": "error", "reason": "no model attempted"}
+    for mid in chain:
+        env = await _normalize_once(source, mid)
+        if env.get("status") == "ok":
+            env["model_used"] = mid
+            return env
+        last = env
+        # Only try the next tier if THIS model was exhausted/unavailable; a real
+        # ingest error (bad file, empty text) or a missing key should not loop.
+        if env.get("status") == "not_configured" or not _model_unavailable(env.get("reason", "")):
+            break
+    last.setdefault("model_used", chain[0])
+    return last
+
+
+async def _normalize_once(source: dict, model: str) -> dict:
+    """Dispatch ingestion by source type on a specific model (blocking IO in a thread)."""
     stype = (source.get("type") or "text").lower()
     if stype == "text":
-        return await asyncio.to_thread(ingest.normalize_text, source.get("text", ""))
+        return await asyncio.to_thread(ingest.normalize_text, source.get("text", ""), None, "text", model)
     if stype == "url":
-        return await asyncio.to_thread(ingest.normalize_url, source.get("url", ""))
+        return await asyncio.to_thread(ingest.normalize_url, source.get("url", ""), model)
     if stype in ("pdf", "image", "file"):
         b64 = source.get("file_b64", "")
         if not b64:
             return {"status": "error", "reason": "no file_b64 provided"}
         data = ingest.b64_to_bytes(b64)
         return await asyncio.to_thread(ingest.decode_file, data,
-                                       source.get("filename", ""), source.get("content_type"))
+                                       source.get("filename", ""), source.get("content_type"), model)
     return {"status": "error", "reason": f"unknown source type: {stype}"}
 
 
@@ -331,8 +382,14 @@ def _trim_retrieval(retrieval: dict) -> dict:
                         for r in retrieval.get("results", [])[:5]]}
 
 
-async def _write_verdict(evidence: dict, heuristic_band: str) -> dict:
-    """Run the Gemini Verdict Writer over the gathered evidence."""
+async def _write_verdict(evidence: dict, heuristic_band: str,
+                         model: str | None = None) -> dict:
+    """Run the Gemini Verdict Writer over the gathered evidence.
+
+    Tries the requested model, then fails over to the next Gemini tier if the
+    model is rate-limited/unavailable. Records which model produced the verdict
+    in ``model_used`` / ``is_fallback``.
+    """
     payload = {
         "listing": evidence.get("listing"),
         "retrieval": _trim_retrieval(evidence.get("retrieval", {})),
@@ -351,16 +408,31 @@ async def _write_verdict(evidence: dict, heuristic_band: str) -> dict:
         + json.dumps(payload, default=str)[:6000]
         + "\n\nReturn the verdict JSON now."
     )
-    _tools, text = await _run_agent("verdict", 7, message)
-    parsed = ingest.parse_json(text)
-    if parsed is None:
-        # One retry with a blunt instruction.
-        _tools, text = await _run_agent("verdict", 7, message + "\n\nReturn ONLY the JSON object.")
-        parsed = ingest.parse_json(text)
-    if parsed is None:
-        raise ValueError("verdict writer did not return valid JSON")
 
-    return _sanitize_verdict(parsed, heuristic_band)
+    last_exc: Exception | None = None
+    for mid in registry.fallback_chain(model):
+        runner = _verdict_runner(mid)
+        try:
+            _tools, text = await _run_agent(runner, 7, message)
+            parsed = ingest.parse_json(text)
+            if parsed is None:
+                # One retry with a blunt instruction (same model).
+                _tools, text = await _run_agent(runner, 7, message + "\n\nReturn ONLY the JSON object.")
+                parsed = ingest.parse_json(text)
+            if parsed is None:
+                raise ValueError("verdict writer did not return valid JSON")
+            out = _sanitize_verdict(parsed, heuristic_band)
+            out["model_used"] = mid
+            out["is_fallback"] = mid != (model or registry.DEFAULT_MODEL)
+            return out
+        except Exception as exc:  # noqa: BLE001
+            last_exc = exc
+            # Only fail over to the next tier when THIS model was exhausted/
+            # unavailable; a genuine parse/verdict failure should surface as-is.
+            if not _model_unavailable(str(exc)):
+                raise
+            continue
+    raise last_exc if last_exc else RuntimeError("verdict failed: no Gemini model available")
 
 
 _ALLOWED_VERDICTS = {"SCAM", "SUSPICIOUS", "LIKELY-LEGIT"}
