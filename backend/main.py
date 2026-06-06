@@ -289,7 +289,7 @@ async def auth_login(body: dict):
 
 
 import base64
-from fastapi import Header
+from fastapi import Header, Depends, HTTPException
 
 def get_current_user_id(authorization: str = Header(None)) -> str:
     """Extract user_id from the simple frontend btoa() token."""
