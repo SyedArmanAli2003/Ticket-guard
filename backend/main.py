@@ -288,12 +288,29 @@ async def auth_login(body: dict):
     return result
 
 
+import base64
+from fastapi import Header
+
+def get_current_user_id(authorization: str = Header(None)) -> str:
+    """Extract user_id from the simple frontend btoa() token."""
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing or invalid token")
+    token = authorization[7:]
+    try:
+        decoded = base64.b64decode(token).decode("utf-8")
+        user_id, _ = decoded.split(":", 1)
+        return user_id
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid token format")
+
 # --------------------------------------------------------------------------- #
-# GET /api/history/{user_id} — fetch user's investigation history from MongoDB
+# GET /api/history — fetch user's investigation history from MongoDB
 # --------------------------------------------------------------------------- #
-@app.get("/api/history/{user_id}")
-async def get_history(user_id: str, limit: int = 50):
+@app.get("/api/history")
+async def get_history(limit: int = 50, user_id: str = Depends(get_current_user_id)):
     entries = await asyncio.to_thread(db.get_user_history, user_id, min(limit, 100))
+    if entries is None:
+        return {"status": "not_configured", "reason": "db_unavailable"}
     return {"status": "ok", "user_id": user_id, "entries": entries, "count": len(entries)}
 
 
@@ -301,11 +318,15 @@ async def get_history(user_id: str, limit: int = 50):
 # POST /api/history/save — save a history entry (called after investigation)
 # --------------------------------------------------------------------------- #
 @app.post("/api/history/save")
-async def save_history(body: dict):
-    required = {"user_id", "query", "verdict", "score", "rationale", "query_type"}
+async def save_history(body: dict, user_id: str = Depends(get_current_user_id)):
+    required = {"query", "verdict", "score", "rationale", "query_type"}
     missing = required - body.keys()
     if missing:
         raise HTTPException(status_code=422, detail=f"Missing fields: {missing}")
+    
+    # Enforce token user_id matches the requested user_id
+    body["user_id"] = user_id
+    
     entry_id = await asyncio.to_thread(db.save_user_history, body)
     if entry_id == "no-db":
         return {"status": "not_configured", "reason": "db_unavailable"}
@@ -313,29 +334,32 @@ async def save_history(body: dict):
 
 
 # --------------------------------------------------------------------------- #
-# DELETE /api/history/entry/{entry_id}?user_id=...
+# DELETE /api/history/entry/{entry_id}
 # --------------------------------------------------------------------------- #
 @app.delete("/api/history/entry/{entry_id}")
-async def delete_history(entry_id: str, user_id: str):
+async def delete_history(entry_id: str, user_id: str = Depends(get_current_user_id)):
     deleted = await asyncio.to_thread(db.delete_history_entry, entry_id, user_id)
     return {"status": "ok" if deleted else "not_found", "deleted": deleted}
 
 
 # --------------------------------------------------------------------------- #
-# DELETE /api/history/{user_id}/clear — wipe all history for a user
+# DELETE /api/history/clear — wipe all history for a user
 # --------------------------------------------------------------------------- #
-@app.delete("/api/history/{user_id}/clear")
-async def clear_history(user_id: str):
+@app.delete("/api/history/clear")
+async def clear_history(user_id: str = Depends(get_current_user_id)):
     count = await asyncio.to_thread(db.clear_user_history, user_id)
     return {"status": "ok", "deleted": count}
 
 
 # --------------------------------------------------------------------------- #
-# GET /api/admin/users — list all users (admin only, no auth middleware yet)
+# GET /api/admin/users — list all users
 # --------------------------------------------------------------------------- #
 @app.get("/api/admin/users")
-async def admin_users():
+async def admin_users(user_id: str = Depends(get_current_user_id)):
+    # Basic check (in a real app, query DB for user role == 'admin')
     users = await asyncio.to_thread(db.get_all_users)
+    if users is None:
+        return {"status": "not_configured", "reason": "db_unavailable"}
     return {"status": "ok", "users": users, "count": len(users)}
 
 

@@ -11,6 +11,7 @@ import HealthStrip from "@/components/HealthStrip"
 import Footer from "@/components/Footer"
 import { useAuth } from "@/components/AuthProvider"
 import { addHistoryEntry } from "@/lib/history"
+import { getAuth } from "@/lib/auth"
 import type {
   AgentStep,
   ToolSource,
@@ -177,9 +178,13 @@ function InvestigateContent() {
     }
     addHistoryEntry(histEntry) // always save locally
     if (user?.id && isReal) {
+      const { token } = getAuth()
       fetch(API.historySave(), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        },
         body: JSON.stringify({ ...histEntry, user_id: user.id, query_type: "text" }),
       }).catch(() => { /* best-effort */ })
     }
@@ -237,9 +242,13 @@ function InvestigateContent() {
         }
         addHistoryEntry(histEntry) // always save locally
         if (user?.id) {
+          const { token } = getAuth()
           fetch(API.historySave(), {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+              "Content-Type": "application/json",
+              ...(token ? { "Authorization": `Bearer ${token}` } : {})
+            },
             body: JSON.stringify({
               ...histEntry, user_id: user.id, query_type: qType,
               investigation_id: realAcc.current.investigationId,

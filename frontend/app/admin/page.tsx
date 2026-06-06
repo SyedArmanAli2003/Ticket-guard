@@ -8,10 +8,10 @@ import {
 } from "lucide-react"
 import Navbar from "@/components/Navbar"
 import { useAuth } from "@/components/AuthProvider"
-import { getAllUsers } from "@/lib/auth"
+import { getAllUsers, getAuth } from "@/lib/auth"
 import type { AuthUser } from "@/lib/auth"
 import { getHealth } from "@/lib/api"
-import { getMode } from "@/lib/config"
+import { getMode, API } from "@/lib/config"
 import { EASE_OUT, staggerContainer, fadeUpItem } from "@/lib/motion"
 import { useRouter } from "next/navigation"
 
@@ -73,8 +73,23 @@ export default function AdminPage() {
   useEffect(() => {
     if (!user) { router.push("/"); return }
     if (user.role !== "admin") { router.push("/investigate"); return }
-    setUsers(getAllUsers())
-  }, [user, router])
+    
+    // Fetch users (MongoDB in real mode, local otherwise)
+    if (mode === "real") {
+      const { token } = getAuth()
+      fetch(API.adminUsers(), {
+        headers: token ? { "Authorization": `Bearer ${token}` } : {},
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.status === "ok" && data.users) setUsers(data.users)
+        else setUsers(getAllUsers()) // fallback to local on failure
+      })
+      .catch(() => setUsers(getAllUsers()))
+    } else {
+      setUsers(getAllUsers())
+    }
+  }, [user, router, mode])
 
   useEffect(() => {
     if (mode === "real") {
@@ -91,8 +106,15 @@ export default function AdminPage() {
     setRefreshing(true)
     if (mode === "real") {
       try { const h = await getHealth(); setHealth(h as unknown as Record<string, unknown>) } catch { /* */ }
+      try {
+        const { token } = getAuth()
+        const res = await fetch(API.adminUsers(), { headers: token ? { "Authorization": `Bearer ${token}` } : {} })
+        const data = await res.json()
+        if (data.status === "ok" && data.users) setUsers(data.users)
+      } catch { /* */ }
+    } else {
+      setUsers(getAllUsers())
     }
-    setUsers(getAllUsers())
     await new Promise(r => setTimeout(r, 600))
     setRefreshing(false)
   }

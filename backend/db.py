@@ -756,20 +756,20 @@ def login_user(email: str, password: str) -> dict:
     }}
 
 
-def get_all_users() -> list[dict]:
-    """Return all users without password fields (admin use)."""
+def get_all_users() -> list[dict] | None:
+    """List all registered users (admin utility). Returns None if DB unavailable."""
     db = _get_db()
     if db is None:
-        return []
+        return None
     try:
-        docs = list(db[config.COLL_USERS].find({}, {"_id": 0, "password_hash": 0, "password_salt": 0})
-                    .sort("created_at", DESCENDING))
+        docs = list(db[config.COLL_USERS].find({}, {"password_hash": 0}).sort("created_at", DESCENDING))
         for d in docs:
+            d["id"] = str(d.pop("_id"))
             if isinstance(d.get("created_at"), datetime):
                 d["created_at"] = d["created_at"].isoformat()
         return docs
-    except Exception:  # noqa: BLE001
-        return []
+    except Exception:
+        return None
 
 
 # --------------------------------------------------------------------------- #
@@ -789,24 +789,26 @@ def save_user_history(entry: dict) -> str:
         return "no-db"
 
 
-def get_user_history(user_id: str, limit: int = 50) -> list[dict]:
-    """Fetch history for a specific user, newest first."""
+def get_user_history(user_id: str, limit: int = 50) -> list[dict] | None:
+    """Fetch history for a specific user, newest first. Returns None if DB unavailable."""
     db = _get_db()
     if db is None:
-        return []
+        return None
     try:
         docs = list(
             db[config.COLL_USER_HISTORY]
-            .find({"user_id": user_id}, {"_id": 0, "password_hash": 0})
+            .find({"user_id": user_id}, {"password_hash": 0})
             .sort("created_at", DESCENDING)
             .limit(limit)
         )
         for d in docs:
+            if "_id" in d:
+                d["entry_id"] = str(d.pop("_id"))
             if isinstance(d.get("created_at"), datetime):
                 d["created_at"] = d["created_at"].isoformat()
         return docs
     except Exception:  # noqa: BLE001
-        return []
+        return None
 
 
 def delete_history_entry(entry_id: str, user_id: str) -> bool:

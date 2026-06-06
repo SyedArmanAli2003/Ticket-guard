@@ -79,7 +79,10 @@ export default function HistoryPage() {
     // Try MongoDB first (real mode)
     if (isRealMode()) {
       try {
-        const res = await fetch(API.history(user.id))
+        const { token } = getAuth()
+        const res = await fetch(API.history(user.id), {
+          headers: token ? { "Authorization": `Bearer ${token}` } : {},
+        })
         if (res.ok) {
           const data = await res.json()
           if (data.status === "ok") {
@@ -110,8 +113,10 @@ export default function HistoryPage() {
 
     if (dbMode === "mongo" && isRealMode()) {
       try {
+        const { token } = getAuth()
         await fetch(`${API.historyDeleteEntry(entry.id)}?user_id=${encodeURIComponent(user.id)}`, {
           method: "DELETE",
+          headers: token ? { "Authorization": `Bearer ${token}` } : {},
         })
       } catch { /* best-effort */ }
     }
@@ -125,7 +130,11 @@ export default function HistoryPage() {
 
     if (dbMode === "mongo" && isRealMode()) {
       try {
-        await fetch(API.historyClear(user.id), { method: "DELETE" })
+        const { token } = getAuth()
+        await fetch(API.historyClear(user.id), { 
+          method: "DELETE",
+          headers: token ? { "Authorization": `Bearer ${token}` } : {},
+        })
       } catch { /* best-effort */ }
     }
     clearUserHistory(user.id)
