@@ -51,6 +51,25 @@ class InvestigateRequest(BaseModel):
         }
 
 
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"] = "user"
+    content: str = Field(min_length=1, max_length=4000)
+
+
+class ChatRequest(BaseModel):
+    """A follow-up conversation turn about a finished investigation.
+
+    The client sends the running message history plus either the investigation
+    `context` bundle it already has, or an `investigation_id` to load it from
+    Atlas. `conversation_id` continues a persisted thread (set when Atlas is up).
+    """
+
+    messages: list[ChatMessage] = Field(min_length=1, max_length=40)
+    context: Optional[dict] = Field(default=None, description="the investigation bundle (verdict/evidence/listing/...)")
+    investigation_id: Optional[str] = Field(default=None, max_length=64)
+    conversation_id: Optional[str] = Field(default=None, max_length=64)
+
+
 class ReportRequest(BaseModel):
     """A user-submitted scam report — the change-stream source for /api/feed."""
 

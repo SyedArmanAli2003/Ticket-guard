@@ -548,6 +548,49 @@ def investigation_count() -> int:
         return 0
 
 
+# --------------------------------------------------------------------------- #
+# Conversational memory — follow-up chat over an investigation (/api/chat)
+# --------------------------------------------------------------------------- #
+def append_conversation(conversation_id: str | None, investigation_id: str | None,
+                        turns: list[dict]) -> str:
+    """Append message turns to a conversation, creating it on first turn.
+
+    Returns the conversation id, or "no-db" if Atlas is unreachable — chat still
+    works in-session (history is sent by the client); it just isn't persisted.
+    """
+    db = _get_db()
+    if db is None:
+        return "no-db"
+    try:
+        now = datetime.now(timezone.utc)
+        msgs = [{"role": t.get("role", "user"), "content": t.get("content", ""), "ts": now}
+                for t in turns if t.get("content")]
+        if conversation_id and ObjectId.is_valid(conversation_id):
+            db[config.COLL_CONVERSATIONS].update_one(
+                {"_id": ObjectId(conversation_id)},
+                {"$push": {"messages": {"$each": msgs}}, "$set": {"updated_at": now}})
+            return conversation_id
+        doc = {"investigation_id": investigation_id, "created_at": now,
+               "updated_at": now, "messages": msgs}
+        return str(db[config.COLL_CONVERSATIONS].insert_one(doc).inserted_id)
+    except Exception:  # noqa: BLE001
+        return "no-db"
+
+
+def get_conversation(conversation_id: str) -> dict | None:
+    """Load a persisted conversation (for resuming memory across sessions)."""
+    db = _get_db()
+    if db is None or not ObjectId.is_valid(conversation_id):
+        return None
+    try:
+        doc = db[config.COLL_CONVERSATIONS].find_one({"_id": ObjectId(conversation_id)})
+        if doc:
+            doc["_id"] = str(doc["_id"])
+        return doc
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def save_report(report: dict) -> str:
     """Write a user-submitted scam report (the /api/feed change-stream source)."""
     db = _get_db()
