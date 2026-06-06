@@ -1,32 +1,58 @@
-"""MongoDB Atlas data layer: persistence + Gemini-embedded Atlas Vector Search.
+"""MongoDB Atlas data layer for TicketGuard.
 
-Everything here degrades gracefully: if Atlas is unreachable (e.g. the caller's
-IP isn't allow-listed yet) or embeddings fail, functions return safe fallbacks
-so the agent still produces a plan. Full grounding lights up once Atlas is
-reachable and the vector index is built.
+This is where the REAL grounding happens — hybrid retrieval, reputation,
+forgery/duplicate detection, and the server-side risk-scoring aggregation.
+
+HARD RULE (no fabrication): unlike the original PitchCraft skeleton, retrieval
+here does NOT fall back to a static in-memory corpus to fake a result. If Atlas
+is unreachable or embeddings can't be produced, the affected function returns a
+``{"status": "not_configured", ...}`` envelope and the pipeline surfaces that
+honestly. Static rows must NEVER drive a verdict.
+
+Two MongoDB driver styles are used intentionally:
+  • Synchronous ``pymongo.MongoClient`` — all request-time reads/writes and the
+    explicit write path (reports, investigations). MCP stays read-only.
+  • Asynchronous ``pymongo.AsyncMongoClient`` — ONLY the ``/api/feed`` change
+    stream (PyMongo's native async driver, NOT Motor).
 """
 
 from __future__ import annotations
 
-import re
+import hashlib
+import math
 from datetime import datetime, timezone
+from typing import Any, AsyncIterator
 
 import certifi
 from bson import ObjectId
-from pymongo import MongoClient, ASCENDING
+from pymongo import MongoClient, ASCENDING, DESCENDING
 from pymongo.operations import SearchIndexModel
+
+try:  # PyMongo 4.13+ ships the native async driver.
+    from pymongo import AsyncMongoClient
+except ImportError:  # pragma: no cover - guarded; requirements pin a new enough pymongo
+    AsyncMongoClient = None  # type: ignore[assignment]
 
 from google import genai
 
 import config
 
 # --------------------------------------------------------------------------- #
-# Lazy singletons
+# Lazy singletons + live status
 # --------------------------------------------------------------------------- #
 _client: MongoClient | None = None
 _db = None
+_async_client: Any = None
 _genai_client: genai.Client | None = None
-_status: dict = {"connected": False, "error": None, "vector_index": False}
+
+_status: dict = {
+    "connected": False,
+    "error": None,
+    "vector_index": False,
+    "text_index": False,
+    "cluster_version": None,
+    "rankfusion_capable": False,
+}
 
 
 def _get_db():
@@ -43,9 +69,10 @@ def _get_db():
             tls=True,
             tlsCAFile=certifi.where(),
         )
-        _client.admin.command("ping")
+        info = _client.admin.command("ping")  # noqa: F841 - forces connection
         _db = _client[config.MONGODB_DB]
         _status.update(connected=True, error=None)
+        _detect_cluster_version()
         return _db
     except Exception as exc:  # noqa: BLE001
         _status.update(connected=False, error=str(exc).split(",")[0][:200])
@@ -53,11 +80,27 @@ def _get_db():
         return None
 
 
+def _detect_cluster_version() -> None:
+    """Read the server version once and decide whether native $rankFusion exists."""
+    if _client is None:
+        return
+    try:
+        ver = _client.admin.command("buildInfo").get("version", "")
+        _status["cluster_version"] = ver
+        parts = tuple(int(p) for p in ver.split(".")[:2] if p.isdigit())
+        _status["rankfusion_capable"] = parts >= config.RANKFUSION_MIN_VERSION
+    except Exception:  # noqa: BLE001
+        _status["cluster_version"] = None
+        _status["rankfusion_capable"] = False
+
+
 def _gc() -> genai.Client | None:
     """google-genai client for embeddings (AI Studio or Vertex per config)."""
     global _genai_client
     if _genai_client is not None:
         return _genai_client
+    if not config.gemini_configured():
+        return None
     try:
         if config.USE_VERTEX:
             _genai_client = genai.Client(
@@ -82,7 +125,7 @@ def is_connected() -> bool:
 
 
 # --------------------------------------------------------------------------- #
-# Embeddings
+# Embeddings (Gemini via google-genai)
 # --------------------------------------------------------------------------- #
 def embed_text(text: str) -> list[float] | None:
     client = _gc()
@@ -100,242 +143,549 @@ def embed_text(text: str) -> list[float] | None:
 
 
 # --------------------------------------------------------------------------- #
-# Vector search (Atlas)
+# Step 2 — Hybrid retrieval over scam_corpus (REAL; no static fallback)
 # --------------------------------------------------------------------------- #
-def vector_search_market(query: str, k: int | None = None) -> dict:
-    """Semantic search over the market_corpus via Atlas Vector Search.
+def hybrid_search(query: str, k: int | None = None) -> dict:
+    """Run vector AND full-text retrieval over scam_corpus and fuse the results.
 
-    Returns {"method": "...", "results": [...], "count": n}. Falls back to a
-    regex/text scan, then to the static corpus, so it never hard-fails.
+    Pipelines (both real Atlas aggregations):
+      • ``$vectorSearch`` over the Gemini ``embedding`` (semantic).
+      • Atlas ``$search`` full-text over the listing ``text`` (lexical).
+
+    Fusion: on MongoDB 8.1+ a single native ``$rankFusion`` pipeline does both
+    and fuses server-side. Below 8.1 we run the two pipelines separately and fuse
+    in application code with reciprocal-rank fusion (RRF). The path that ran is
+    reported in ``fusion`` and logged.
+
+    Returns one of:
+      {"status": "ok", "fusion": "native_rankfusion"|"reciprocal_rank_fusion",
+       "results": [{text, label, risk, pattern_type, source_pattern,
+                    vector_score, text_score, fused_score, contribution}],
+       "per_pipeline": {"vector": [...], "text": [...]}, "count": n}
+      {"status": "not_configured", "reason": "..."}    # Atlas down / no embeddings
     """
     k = k or config.VECTOR_TOPK
     db = _get_db()
+    if db is None:
+        return {"status": "not_configured", "reason": _status.get("error") or "atlas_unreachable"}
+
     emb = embed_text(query)
+    if emb is None:
+        return {"status": "not_configured", "reason": "embeddings_unavailable (Gemini key missing or embed failed)"}
 
-    if db is not None and emb is not None:
-        try:
-            pipeline = [
-                {"$vectorSearch": {
-                    "index": config.VECTOR_INDEX,
-                    "path": config.VECTOR_PATH,
-                    "queryVector": emb,
-                    "numCandidates": 100,
-                    "limit": k,
-                }},
-                {"$addFields": {"score": {"$meta": "vectorSearchScore"}}},
-                {"$project": {"embedding": 0, "_id": 0}},
-            ]
-            results = list(db[config.COLL_CORPUS].aggregate(pipeline))
-            if results:
-                _status["vector_index"] = True
-                return {"method": "atlas_vector_search", "results": results,
-                        "count": len(results)}
-        except Exception:  # noqa: BLE001 — index missing or DB issue → fall through
-            pass
+    coll = db[config.COLL_CORPUS]
 
-    # Fallback 1: regex scan in Mongo
-    if db is not None:
-        try:
-            rx = re.compile(re.escape(query.split()[0]) if query else "", re.I)
-            results = list(db[config.COLL_CORPUS].find(
-                {"$or": [{"industry": rx}, {"content": rx}, {"title": rx}]},
-                {"embedding": 0, "_id": 0},
-            ).limit(k))
-            if results:
-                return {"method": "text_fallback", "results": results,
-                        "count": len(results)}
-        except Exception:  # noqa: BLE001
-            pass
+    # Native server-side fusion on 8.1+.
+    if _status.get("rankfusion_capable"):
+        fused = _native_rank_fusion(coll, emb, query, k)
+        if fused is not None:
+            print(f"🔗 hybrid retrieval: native $rankFusion ({len(fused)} hits)")
+            return {"status": "ok", "fusion": "native_rankfusion", "results": fused,
+                    "per_pipeline": _split_per_pipeline(fused), "count": len(fused)}
+        # If $rankFusion errored (e.g. index naming), fall through to code fusion.
 
-    # Fallback 2: static corpus (DB entirely unavailable)
-    res = _static_match(query, k)
-    return {"method": "static_fallback", "results": res, "count": len(res)}
+    vector_hits = _vector_pipeline(coll, emb, k)
+    text_hits = _text_pipeline(coll, query, k)
+    if vector_hits is None and text_hits is None:
+        return {"status": "not_configured", "reason": "search_indexes_missing"}
+
+    fused = _reciprocal_rank_fusion(vector_hits or [], text_hits or [], k)
+    print(f"🔗 hybrid retrieval: reciprocal-rank fusion "
+          f"(vector={len(vector_hits or [])}, text={len(text_hits or [])} → {len(fused)})")
+    return {"status": "ok", "fusion": "reciprocal_rank_fusion", "results": fused,
+            "per_pipeline": {"vector": vector_hits or [], "text": text_hits or []},
+            "count": len(fused)}
 
 
-def _static_match(query: str, k: int) -> list[dict]:
-    q = (query or "").lower()
-    scored = []
-    for doc in SEED_CORPUS:
-        hay = f"{doc['industry']} {doc['title']} {doc['content']}".lower()
-        score = sum(1 for w in set(q.split()) if w and w in hay)
-        scored.append((score, doc))
-    scored.sort(key=lambda x: x[0], reverse=True)
-    return [{k2: v for k2, v in d.items() if k2 != "embedding"}
-            for s, d in scored[:k]]
+_PROJECT = {
+    "embedding": 0,
+    "_id": 0,
+}
+
+
+def _vector_pipeline(coll, emb: list[float], k: int) -> list[dict] | None:
+    """$vectorSearch (semantic). None if the vector index is unavailable."""
+    try:
+        pipeline = [
+            {"$vectorSearch": {
+                "index": config.VECTOR_INDEX,
+                "path": config.VECTOR_PATH,
+                "queryVector": emb,
+                "numCandidates": 100,
+                "limit": k,
+            }},
+            {"$addFields": {"vector_score": {"$meta": "vectorSearchScore"}}},
+            {"$project": {**_PROJECT, "vector_score": 1}},
+        ]
+        out = list(coll.aggregate(pipeline))
+        if out:
+            _status["vector_index"] = True
+        return out
+    except Exception as exc:  # noqa: BLE001
+        print(f"ℹ️  $vectorSearch unavailable ({str(exc)[:80]})")
+        return None
+
+
+def _text_pipeline(coll, query: str, k: int) -> list[dict] | None:
+    """Atlas $search full-text (lexical). None if the text index is unavailable."""
+    if not query:
+        return None
+    try:
+        pipeline = [
+            {"$search": {
+                "index": config.TEXT_INDEX,
+                "text": {"query": query, "path": ["text", "pattern_type", "source_pattern"]},
+            }},
+            {"$limit": k},
+            {"$addFields": {"text_score": {"$meta": "searchScore"}}},
+            {"$project": {**_PROJECT, "text_score": 1}},
+        ]
+        out = list(coll.aggregate(pipeline))
+        if out:
+            _status["text_index"] = True
+        return out
+    except Exception as exc:  # noqa: BLE001
+        print(f"ℹ️  $search (text) unavailable ({str(exc)[:80]})")
+        return None
+
+
+def _native_rank_fusion(coll, emb: list[float], query: str, k: int) -> list[dict] | None:
+    """Single $rankFusion pipeline (MongoDB 8.1+). None if it errors."""
+    try:
+        pipeline = [
+            {"$rankFusion": {
+                "input": {
+                    "pipelines": {
+                        "vector": [
+                            {"$vectorSearch": {
+                                "index": config.VECTOR_INDEX,
+                                "path": config.VECTOR_PATH,
+                                "queryVector": emb,
+                                "numCandidates": 100,
+                                "limit": k,
+                            }},
+                        ],
+                        "text": [
+                            {"$search": {
+                                "index": config.TEXT_INDEX,
+                                "text": {"query": query,
+                                         "path": ["text", "pattern_type", "source_pattern"]},
+                            }},
+                            {"$limit": k},
+                        ],
+                    },
+                },
+                "combination": {"weights": {"vector": 1.0, "text": 1.0}},
+                "scoreDetails": True,
+            }},
+            {"$limit": k},
+            {"$addFields": {"fused_score": {"$meta": "scoreDetails"}}},
+            {"$project": {**_PROJECT, "fused_score": 1}},
+        ]
+        out = list(coll.aggregate(pipeline))
+        if out:
+            _status["vector_index"] = True
+            _status["text_index"] = True
+            for i, doc in enumerate(out):
+                doc["contribution"] = "fused"
+                doc.setdefault("fused_score", round(1.0 / (i + 1), 4))
+        return out
+    except Exception as exc:  # noqa: BLE001
+        print(f"ℹ️  $rankFusion unavailable, using code fusion ({str(exc)[:80]})")
+        return None
+
+
+def _doc_key(doc: dict) -> str:
+    return doc.get("text", "") + "|" + doc.get("handle", "") + "|" + doc.get("domain", "")
+
+
+def _reciprocal_rank_fusion(vector_hits: list[dict], text_hits: list[dict],
+                            k: int, rrf_k: int = 60) -> list[dict]:
+    """Reciprocal-rank fusion of the vector and text result sets.
+
+    score(d) = Σ 1/(rrf_k + rank_in_list).  We track each pipeline's contribution
+    and the per-pipeline scores so the UI can show vector-vs-text breakdown.
+    """
+    merged: dict[str, dict] = {}
+
+    def _accumulate(hits: list[dict], which: str, score_field: str) -> None:
+        for rank, doc in enumerate(hits):
+            key = _doc_key(doc)
+            entry = merged.setdefault(key, {
+                **{kk: vv for kk, vv in doc.items() if kk not in ("vector_score", "text_score")},
+                "vector_score": None, "text_score": None,
+                "fused_score": 0.0, "_contrib": set(),
+            })
+            entry[score_field] = round(float(doc.get(score_field, 0.0)), 4)
+            entry["fused_score"] += 1.0 / (rrf_k + rank + 1)
+            entry["_contrib"].add(which)
+
+    _accumulate(vector_hits, "vector", "vector_score")
+    _accumulate(text_hits, "text", "text_score")
+
+    fused = sorted(merged.values(), key=lambda d: d["fused_score"], reverse=True)[:k]
+    for d in fused:
+        contrib = d.pop("_contrib")
+        d["contribution"] = "both" if len(contrib) == 2 else next(iter(contrib))
+        d["fused_score"] = round(d["fused_score"], 5)
+    return fused
+
+
+def _split_per_pipeline(fused: list[dict]) -> dict:
+    """Best-effort per-pipeline view when the native path didn't expose raw lists."""
+    return {
+        "vector": [d for d in fused if d.get("vector_score") is not None] or fused,
+        "text": [d for d in fused if d.get("text_score") is not None],
+    }
 
 
 # --------------------------------------------------------------------------- #
-# Plan persistence
+# Step 3 — Reputation: typosquat distance + prior reports (DB-gated)
 # --------------------------------------------------------------------------- #
-def save_plan(idea: str) -> str:
+def _levenshtein(a: str, b: str) -> int:
+    """Classic edit distance (insert/delete/substitute)."""
+    if a == b:
+        return 0
+    if not a:
+        return len(b)
+    if not b:
+        return len(a)
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i]
+        for j, cb in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1]
+
+
+def _registrable(domain: str) -> str:
+    """Strip scheme/path/port to a bare host for comparison."""
+    d = (domain or "").strip().lower()
+    d = d.split("//")[-1].split("/")[0].split("?")[0].split(":")[0]
+    return d.removeprefix("www.")
+
+
+def typosquat_check(domain: str) -> dict:
+    """Compare a domain against the official list by edit distance.
+
+    Pure-compute (no DB). Returns nearest official domain + distance + flag.
+    An exact match → distance 0 (not a typosquat). A small non-zero distance to
+    a brand it is NOT equal to is the classic lookalike signal.
+    """
+    host = _registrable(domain)
+    if not host:
+        return {"input": "", "nearest": None, "distance": None, "is_typosquat": False}
+    best, best_d = None, 999
+    for off in config.OFFICIAL_DOMAINS:
+        d = _levenshtein(host, off)
+        if d < best_d:
+            best, best_d = off, d
+    is_squat = best is not None and 1 <= best_d <= 3 and host not in config.OFFICIAL_DOMAINS
+    return {"input": host, "nearest": best, "distance": best_d,
+            "is_typosquat": is_squat, "is_official": host in config.OFFICIAL_DOMAINS}
+
+
+def reputation_check(domain: str, handle: str) -> dict:
+    """Typosquat distance (compute) + prior-report counts (DB aggregation).
+
+    DB-gated: if Atlas is down, ``prior_reports`` is ``not_configured`` but the
+    typosquat distance (pure compute) is still returned so the UI shows signal.
+    """
+    typo = typosquat_check(domain)
     db = _get_db()
     if db is None:
-        return "no-db"
-    doc = {
-        "idea": idea,
-        "created_at": datetime.now(timezone.utc),
-        "status": "generating",
-        "validation": {}, "market_research": {}, "personas": [],
-        "business_plan": {}, "financials": {}, "risks": {},
-        "action_items": {}, "share_token": None,
-    }
-    return str(db[config.COLL_PLANS].insert_one(doc).inserted_id)
+        return {"typosquat": typo, "prior_reports": {"status": "not_configured",
+                "reason": _status.get("error") or "atlas_unreachable"}}
+    try:
+        host = _registrable(domain)
+        match: dict = {"$or": []}
+        if host:
+            match["$or"].append({"domain": host})
+        if handle:
+            match["$or"].append({"handle": handle})
+        if not match["$or"]:
+            return {"typosquat": typo,
+                    "prior_reports": {"status": "ok", "total": 0, "by_pattern": []}}
+        pipeline = [
+            {"$match": match},
+            {"$group": {"_id": "$pattern_type", "count": {"$sum": 1}}},
+            {"$sort": {"count": -1}},
+        ]
+        rows = list(db[config.COLL_REPORTS].aggregate(pipeline))
+        total = sum(r["count"] for r in rows)
+        return {"typosquat": typo, "prior_reports": {"status": "ok", "total": total,
+                "by_pattern": [{"pattern_type": r["_id"], "count": r["count"]} for r in rows]}}
+    except Exception as exc:  # noqa: BLE001
+        return {"typosquat": typo,
+                "prior_reports": {"status": "not_configured", "reason": str(exc)[:120]}}
 
 
-def update_plan(plan_id: str, field: str, data) -> None:
-    if plan_id == "no-db":
+# --------------------------------------------------------------------------- #
+# Step 4 — Forgery / duplicate: sha256(barcode) → tickets_seen (DB-gated)
+# --------------------------------------------------------------------------- #
+def sha256_ref(ref: str) -> str:
+    return hashlib.sha256(ref.strip().encode("utf-8")).hexdigest()
+
+
+def duplicate_check(barcode_or_ref: str) -> dict:
+    """Hash a barcode/booking-ref and look it up in tickets_seen.
+
+    Returns {"status":"ok","hash":..,"offered_to":N,"buyers":[...]} or, if no
+    ref was extracted, {"status":"no_reference"}; if Atlas down, "not_configured".
+    """
+    if not barcode_or_ref:
+        return {"status": "no_reference"}
+    h = sha256_ref(barcode_or_ref)
+    db = _get_db()
+    if db is None:
+        return {"status": "not_configured", "hash": h,
+                "reason": _status.get("error") or "atlas_unreachable"}
+    try:
+        doc = db[config.COLL_TICKETS_SEEN].find_one({"hash": h}, {"_id": 0})
+        if not doc:
+            return {"status": "ok", "hash": h, "offered_to": 0, "buyers": []}
+        buyers = doc.get("buyers", [])
+        return {"status": "ok", "hash": h,
+                "offered_to": int(doc.get("offered_to", len(buyers))), "buyers": buyers}
+    except Exception as exc:  # noqa: BLE001
+        return {"status": "not_configured", "hash": h, "reason": str(exc)[:120]}
+
+
+def record_ticket_seen(barcode_or_ref: str, buyer: str) -> None:
+    """Append a buyer to a barcode's tickets_seen record (explicit pymongo write)."""
+    if not barcode_or_ref:
         return
     db = _get_db()
     if db is None:
         return
     try:
-        db[config.COLL_PLANS].update_one(
-            {"_id": ObjectId(plan_id)}, {"$set": {field: data}})
+        db[config.COLL_TICKETS_SEEN].update_one(
+            {"hash": sha256_ref(barcode_or_ref)},
+            {"$addToSet": {"buyers": buyer}, "$inc": {"offered_to": 1},
+             "$setOnInsert": {"created_at": datetime.now(timezone.utc)}},
+            upsert=True,
+        )
     except Exception:  # noqa: BLE001
         pass
 
 
-def get_plan(plan_id: str) -> dict | None:
-    if plan_id == "no-db":
-        return None
-    db = _get_db()
-    if db is None or not ObjectId.is_valid(plan_id):
-        return None
-    return db[config.COLL_PLANS].find_one({"_id": ObjectId(plan_id)})
+# --------------------------------------------------------------------------- #
+# Step 5 — Risk scorer: server-side $group/$facet aggregation (DB-gated)
+# --------------------------------------------------------------------------- #
+# Signal weights live server-side via a $switch in the aggregation. The score is
+# computed by MongoDB ($facet over a one-document signal stream), NOT the LLM.
+def score_signals(signals: list[dict]) -> dict:
+    """Compute a 0-100 risk score from collected signals via Atlas aggregation.
 
-
-def get_plan_by_token(token: str) -> dict | None:
+    ``signals`` is a list of {"signal": str, "weight": int, "detail": str}. We
+    insert them into a transient pipeline (``$documents``) and let the server
+    $group the total + $facet a severity breakdown. DB-gated: returns
+    not_configured if Atlas is down (we never score from static data here).
+    """
     db = _get_db()
     if db is None:
+        return {"status": "not_configured", "reason": _status.get("error") or "atlas_unreachable"}
+    if not signals:
+        return {"status": "ok", "score": 0, "band": "LOW", "by_severity": [], "n_signals": 0}
+    try:
+        pipeline = [
+            {"$documents": signals},
+            {"$addFields": {
+                "severity": {"$switch": {"branches": [
+                    {"case": {"$gte": ["$weight", 30]}, "then": "high"},
+                    {"case": {"$gte": ["$weight", 15]}, "then": "medium"},
+                ], "default": "low"}},
+            }},
+            {"$facet": {
+                "total": [{"$group": {"_id": None, "score": {"$sum": "$weight"},
+                                      "n": {"$sum": 1}}}],
+                "by_severity": [{"$group": {"_id": "$severity", "count": {"$sum": 1},
+                                            "weight": {"$sum": "$weight"}}},
+                               {"$sort": {"weight": -1}}],
+            }},
+        ]
+        # $documents must run on a database (no collection needed); use admin-safe coll.
+        res = list(db[config.COLL_CORPUS].aggregate(pipeline))
+        facet = res[0] if res else {"total": [], "by_severity": []}
+        total = facet["total"][0]["score"] if facet["total"] else 0
+        n = facet["total"][0]["n"] if facet["total"] else 0
+        score = min(100, int(total))
+        band = "HIGH" if score >= 60 else "MEDIUM" if score >= 30 else "LOW"
+        return {"status": "ok", "score": score, "band": band, "n_signals": n,
+                "by_severity": [{"severity": r["_id"], "count": r["count"],
+                                 "weight": r["weight"]} for r in facet["by_severity"]]}
+    except Exception as exc:  # noqa: BLE001
+        return {"status": "not_configured", "reason": str(exc)[:120]}
+
+
+# --------------------------------------------------------------------------- #
+# Step 8 — Persistence: investigations + reports (explicit pymongo writes)
+# --------------------------------------------------------------------------- #
+def save_investigation(doc: dict) -> str:
+    """Persist a finished investigation to the investigations collection."""
+    db = _get_db()
+    if db is None:
+        return "no-db"
+    try:
+        out = dict(doc)
+        out["created_at"] = datetime.now(timezone.utc)
+        return str(db[config.COLL_INVESTIGATIONS].insert_one(out).inserted_id)
+    except Exception:  # noqa: BLE001
+        return "no-db"
+
+
+def get_investigation(inv_id: str) -> dict | None:
+    db = _get_db()
+    if db is None or not ObjectId.is_valid(inv_id):
         return None
-    return db[config.COLL_PLANS].find_one({"share_token": token})
+    doc = db[config.COLL_INVESTIGATIONS].find_one({"_id": ObjectId(inv_id)})
+    if doc:
+        doc["_id"] = str(doc["_id"])
+    return doc
 
 
-def get_plan_count() -> int:
+def investigation_count() -> int:
     db = _get_db()
     if db is None:
         return 0
     try:
-        return db[config.COLL_PLANS].count_documents({})
+        return db[config.COLL_INVESTIGATIONS].count_documents({})
     except Exception:  # noqa: BLE001
         return 0
 
 
-def find_similar_plans(industry: str, limit: int = 3) -> list[dict]:
-    """Past completed plans in the same market — agent grounding signal."""
+def save_report(report: dict) -> str:
+    """Write a user-submitted scam report (the /api/feed change-stream source)."""
+    db = _get_db()
+    if db is None:
+        return "no-db"
+    try:
+        out = dict(report)
+        out["created_at"] = datetime.now(timezone.utc)
+        rid = str(db[config.COLL_REPORTS].insert_one(out).inserted_id)
+        # If the report carries a barcode/ref, also record it as "seen".
+        ref = out.get("barcode_or_ref")
+        if ref:
+            record_ticket_seen(ref, out.get("reporter", "anonymous"))
+        return rid
+    except Exception:  # noqa: BLE001
+        return "no-db"
+
+
+def recent_reports(limit: int = 20) -> list[dict]:
     db = _get_db()
     if db is None:
         return []
     try:
-        rx = re.compile(re.escape(industry or ""), re.I)
-        plans = list(db[config.COLL_PLANS].find(
-            {"validation.target_market": rx, "status": "complete"},
-            {"idea": 1, "validation.viability_score": 1,
-             "financials.year3_revenue": 1, "_id": 0},
-        ).limit(limit))
-        return plans
+        docs = list(db[config.COLL_REPORTS].find({}, {"_id": 0})
+                    .sort("created_at", DESCENDING).limit(limit))
+        for d in docs:
+            if isinstance(d.get("created_at"), datetime):
+                d["created_at"] = d["created_at"].isoformat()
+        return docs
     except Exception:  # noqa: BLE001
         return []
 
 
 # --------------------------------------------------------------------------- #
-# Seeding + index bootstrap
+# /api/feed — real change stream over reports (PyMongo ASYNC driver, NOT Motor)
 # --------------------------------------------------------------------------- #
-def init_db() -> None:
-    """Connect, ensure indexes, seed the vector corpus. Safe to call on boot."""
-    db = _get_db()
-    if db is None:
-        print(f"⚠️  MongoDB unavailable — {_status['error']}. Running degraded.")
+async def watch_reports() -> AsyncIterator[dict]:
+    """Yield newly-inserted report documents from a MongoDB change stream.
+
+    Uses ``pymongo.AsyncMongoClient`` (the native async driver). If Atlas is
+    unreachable or the change stream can't open (e.g. standalone, no oplog), this
+    yields a single ``{"status":"not_configured"}`` and returns — no fakery.
+    """
+    global _async_client
+    if AsyncMongoClient is None or not config.mongo_configured():
+        yield {"status": "not_configured", "reason": "async driver or URI unavailable"}
         return
     try:
-        db[config.COLL_PLANS].create_index(
-            [("share_token", ASCENDING)], unique=True,
-            partialFilterExpression={"share_token": {"$type": "string"}},
-            name="share_token_unique")
-        _ensure_vector_index(db)
-        seed_market_corpus()
-        print(f"✅ MongoDB ready (vector_index={_status['vector_index']})")
+        if _async_client is None:
+            _async_client = AsyncMongoClient(
+                config.MONGODB_URI, tls=True, tlsCAFile=certifi.where(),
+                serverSelectionTimeoutMS=6000,
+            )
+        coll = _async_client[config.MONGODB_DB][config.COLL_REPORTS]
+        async with coll.watch(full_document="updateLookup") as stream:
+            async for change in stream:
+                if change.get("operationType") != "insert":
+                    continue
+                doc = change.get("fullDocument", {}) or {}
+                doc.pop("_id", None)
+                if isinstance(doc.get("created_at"), datetime):
+                    doc["created_at"] = doc["created_at"].isoformat()
+                yield {"status": "ok", "report": doc}
+    except Exception as exc:  # noqa: BLE001
+        yield {"status": "not_configured", "reason": str(exc)[:160]}
+        return
+
+
+# --------------------------------------------------------------------------- #
+# Index bootstrap (used by scripts/setup_atlas.py; safe no-ops on boot)
+# --------------------------------------------------------------------------- #
+def ensure_search_indexes(db) -> dict:
+    """Create the vector + text Atlas Search indexes if missing. Returns status."""
+    created = {"vector": False, "text": False}
+    coll = db[config.COLL_CORPUS]
+    try:
+        existing = {i["name"] for i in coll.list_search_indexes()}
+    except Exception:  # noqa: BLE001
+        existing = set()
+
+    if config.VECTOR_INDEX not in existing:
+        try:
+            coll.create_search_index(model=SearchIndexModel(
+                definition={"fields": [{
+                    "type": "vector", "path": config.VECTOR_PATH,
+                    "numDimensions": config.EMBED_DIMS, "similarity": "cosine",
+                }]},
+                name=config.VECTOR_INDEX, type="vectorSearch"))
+            created["vector"] = True
+            _status["vector_index"] = True
+        except Exception as exc:  # noqa: BLE001
+            print(f"ℹ️  vector index not created ({str(exc)[:80]})")
+    else:
+        _status["vector_index"] = True
+
+    if config.TEXT_INDEX not in existing:
+        try:
+            coll.create_search_index(model=SearchIndexModel(
+                definition={"mappings": {"dynamic": False, "fields": {
+                    "text": {"type": "string"},
+                    "pattern_type": {"type": "string"},
+                    "source_pattern": {"type": "string"},
+                }}},
+                name=config.TEXT_INDEX))
+            created["text"] = True
+            _status["text_index"] = True
+        except Exception as exc:  # noqa: BLE001
+            print(f"ℹ️  text index not created ({str(exc)[:80]})")
+    else:
+        _status["text_index"] = True
+
+    return created
+
+
+def init_db() -> None:
+    """Connect + detect version + ensure helper indexes. Safe to call on boot.
+
+    NOTE: this does NOT seed the corpus — seeding (with embeddings) is the job of
+    scripts/setup_atlas.py so a cold boot never silently invents grounding data.
+    """
+    db = _get_db()
+    if db is None:
+        print(f"⚠️  MongoDB unavailable — {_status['error']}. Retrieval will report not_configured.")
+        return
+    try:
+        db[config.COLL_REPORTS].create_index([("created_at", DESCENDING)], name="reports_recent")
+        db[config.COLL_INVESTIGATIONS].create_index(
+            [("created_at", DESCENDING)], name="inv_recent")
+        db[config.COLL_TICKETS_SEEN].create_index(
+            [("hash", ASCENDING)], unique=True, name="ticket_hash_unique")
+        print(f"✅ MongoDB ready (version={_status['cluster_version']}, "
+              f"rankfusion_capable={_status['rankfusion_capable']})")
     except Exception as exc:  # noqa: BLE001
         print(f"❌ MongoDB init error: {exc}")
-
-
-def _ensure_vector_index(db) -> None:
-    try:
-        existing = {i["name"] for i in db[config.COLL_CORPUS].list_search_indexes()}
-        if config.VECTOR_INDEX in existing:
-            _status["vector_index"] = True
-            return
-        model = SearchIndexModel(
-            definition={"fields": [{
-                "type": "vector", "path": config.VECTOR_PATH,
-                "numDimensions": config.EMBED_DIMS, "similarity": "cosine",
-            }]},
-            name=config.VECTOR_INDEX, type="vectorSearch")
-        db[config.COLL_CORPUS].create_search_index(model=model)
-        _status["vector_index"] = True
-        print("🔎 Created Atlas vector index (building may take ~1 min)")
-    except Exception as exc:  # noqa: BLE001
-        print(f"ℹ️  Vector index not created ({str(exc)[:80]}) — using fallback search")
-
-
-def seed_market_corpus() -> None:
-    """Insert curated market-intel docs with embeddings if corpus is empty."""
-    db = _get_db()
-    if db is None:
-        return
-    coll = db[config.COLL_CORPUS]
-    if coll.estimated_document_count() > 0:
-        return
-    docs = []
-    for d in SEED_CORPUS:
-        doc = dict(d)
-        emb = embed_text(f"{doc['industry']}. {doc['title']}. {doc['content']}")
-        if emb:
-            doc["embedding"] = emb
-        docs.append(doc)
-    if docs:
-        coll.insert_many(docs)
-        print(f"🌱 Seeded {len(docs)} market-intel docs"
-              + (" with embeddings" if "embedding" in docs[0] else " (no embeddings)"))
-
-
-# Curated market-intelligence corpus (grounds the agent's research).
-SEED_CORPUS = [
-    {"industry": "Technology", "title": "SaaS market scale & dynamics",
-     "content": "Global tech market ~$5.3T, ~8% CAGR. SaaS gross margins 70-85%. "
-                "Top risks: rapid obsolescence, talent costs, security/privacy compliance. "
-                "Winners differentiate on workflow depth and data moats.", "source": "industry-brief"},
-    {"industry": "Healthcare", "title": "Digital health & regulation",
-     "content": "Healthcare ~$12T, ~9% CAGR. Long sales cycles, FDA/HIPAA compliance, "
-                "reimbursement complexity. Clinical validation is the key cost and moat.", "source": "industry-brief"},
-    {"industry": "Education", "title": "EdTech adoption & monetization",
-     "content": "EdTech ~$7T, ~10% CAGR. Low willingness to pay, high churn, slow institutional "
-                "adoption. Outcome measurement and B2B2C distribution drive durable revenue.", "source": "industry-brief"},
-    {"industry": "Food & Beverage", "title": "F&B margins & logistics",
-     "content": "F&B ~$8T, ~6% CAGR. Thin margins, perishability, food-safety regulation. "
-                "Brand and supply-chain efficiency separate winners from the pack.", "source": "industry-brief"},
-    {"industry": "E-commerce", "title": "E-commerce unit economics",
-     "content": "E-commerce ~$6.3T, ~11% CAGR. Customer-acquisition cost and fulfillment "
-                "dominate economics; platform dependency is a structural risk.", "source": "industry-brief"},
-    {"industry": "Finance", "title": "FinTech trust & compliance",
-     "content": "Financial services ~$26T, ~7% CAGR (FinTech). Licensing, fraud risk, and "
-                "incumbent trust are barriers. Embedded finance and real-time rails are growth vectors.", "source": "industry-brief"},
-    {"industry": "Real Estate", "title": "PropTech cyclicality",
-     "content": "PropTech-adjacent real estate ~$3.7T, ~5% CAGR. High capital intensity, "
-                "market cyclicality, fragmented data. Workflow + data products de-risk transactions.", "source": "industry-brief"},
-    {"industry": "Transportation", "title": "Mobility & logistics economics",
-     "content": "Transportation ~$7T, ~6% CAGR. Capital/infra costs, regulation, safety/liability. "
-                "Unit economics and density determine viability.", "source": "industry-brief"},
-    {"industry": "Entertainment", "title": "Attention & monetization",
-     "content": "Entertainment ~$2.8T, ~8% CAGR. Content costs and attention competition; "
-                "monetization and churn are central. Rights/licensing gate scale.", "source": "industry-brief"},
-    {"industry": "Agriculture", "title": "AgTech adoption cycles",
-     "content": "AgTech ~$12T, ~7% CAGR. Long adoption cycles, weather/climate risk, "
-                "fragmented buyers. Financing models and agronomic ROI proof unlock sales.", "source": "industry-brief"},
-    {"industry": "Logistics", "title": "Last-mile & rural delivery",
-     "content": "Last-mile is 40-53% of shipping cost. Rural delivery economics hinge on route "
-                "density, cold-chain for medicine, and shared infrastructure. Aggregation wins.", "source": "playbook"},
-    {"industry": "Marketplaces", "title": "Two-sided marketplace liquidity",
-     "content": "Marketplaces win on liquidity: solve the cold-start with a constrained niche, "
-                "subsidize the scarce side, and measure time-to-match. Take-rates 10-20%.", "source": "playbook"},
-]

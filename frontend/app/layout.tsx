@@ -1,11 +1,20 @@
 import type { Metadata } from "next"
-import { Sora } from "next/font/google"
+import { Space_Grotesk, Inter } from "next/font/google"
 import "./globals.css"
 
-const sora = Sora({
+// Distinctive display face for headings + technical chrome.
+const display = Space_Grotesk({
   subsets: ["latin"],
-  weight: ["300","400","500","600","700"],
-  variable: "--font-sora",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-display",
+  display: "swap",
+})
+
+// Highly-legible body face.
+const body = Inter({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-body",
   display: "swap",
 })
 
@@ -25,8 +34,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={sora.variable}>
-      <body className="font-sora antialiased">
+    <html lang="en" className={`${display.variable} ${body.variable}`}>
+      <body className="font-body antialiased">
         {children}
       </body>
     </html>

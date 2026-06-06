@@ -1,5 +1,7 @@
 // Original TicketGuard hero mark — a shield fused with a ticket stub + an
 // agent "scan" sweep. Pure SVG/CSS, no trademarked art. Decorative only.
+// Motion: a soft breathing glow, a slow ring pulse, and a scanning sweep.
+// Everything is disabled under prefers-reduced-motion.
 export default function ShieldMark() {
   return (
     <div
@@ -11,16 +13,21 @@ export default function ShieldMark() {
         margin: "0 auto",
       }}
     >
-      {/* soft emerald glow behind the mark */}
+      {/* soft emerald glow behind the mark (breathes) */}
       <div
+        className="tg-glow"
         style={{
           position: "absolute",
-          inset: "-30%",
+          inset: "-34%",
           background:
-            "radial-gradient(circle at 50% 45%, rgba(16,185,129,0.34), transparent 62%)",
-          filter: "blur(10px)",
+            "radial-gradient(circle at 50% 45%, rgba(16,185,129,0.40), transparent 62%)",
+          filter: "blur(12px)",
         }}
       />
+
+      {/* expanding pulse ring */}
+      <span className="tg-ring" />
+
       <svg
         viewBox="0 0 120 120"
         width="100%"
@@ -40,7 +47,7 @@ export default function ShieldMark() {
           </linearGradient>
           <linearGradient id="tgSweep" x1="0" y1="0" x2="0" y2="1">
             <stop stopColor="rgba(110,231,183,0)" />
-            <stop offset="0.5" stopColor="rgba(110,231,183,0.55)" />
+            <stop offset="0.5" stopColor="rgba(110,231,183,0.6)" />
             <stop offset="1" stopColor="rgba(110,231,183,0)" />
           </linearGradient>
           <clipPath id="tgClip">
@@ -50,11 +57,13 @@ export default function ShieldMark() {
 
         {/* shield body */}
         <path
+          className="tg-body"
           d="M60 12 22 24v30c0 23 16 41 38 50 22-9 38-27 38-50V24L60 12Z"
           fill="url(#tgShieldFill)"
           stroke="url(#tgShield)"
           strokeWidth="2.4"
           strokeLinejoin="round"
+          style={{ transformOrigin: "60px 60px" }}
         />
 
         {/* ticket-stub motif inside the shield (dashed perforation + notches) */}
@@ -97,7 +106,39 @@ export default function ShieldMark() {
           100% { transform: translateY(150px); opacity: 0; }
         }
         .tg-sweep { animation: tgSweepMove 3.2s cubic-bezier(0.4,0,0.2,1) infinite; will-change: transform; }
-        @media (prefers-reduced-motion: reduce) { .tg-sweep { animation: none; opacity: 0; } }
+
+        @keyframes tgGlowPulse {
+          0%,100% { opacity: 0.7; transform: scale(1); }
+          50%     { opacity: 1;   transform: scale(1.08); }
+        }
+        .tg-glow { animation: tgGlowPulse 4.2s ease-in-out infinite; will-change: opacity, transform; }
+
+        @keyframes tgBodyPulse {
+          0%,100% { transform: scale(1); }
+          50%     { transform: scale(1.025); }
+        }
+        .tg-body { animation: tgBodyPulse 4.2s ease-in-out infinite; will-change: transform; }
+
+        @keyframes tgRingPulse {
+          0%   { opacity: 0.5; transform: translate(-50%,-50%) scale(0.72); }
+          70%  { opacity: 0;   transform: translate(-50%,-50%) scale(1.15); }
+          100% { opacity: 0;   transform: translate(-50%,-50%) scale(1.15); }
+        }
+        .tg-ring {
+          position: absolute; top: 50%; left: 50%; width: 100%; height: 100%;
+          border-radius: 50%;
+          border: 1px solid rgba(16,185,129,0.5);
+          transform: translate(-50%,-50%) scale(0.72);
+          animation: tgRingPulse 3.2s ease-out infinite;
+          pointer-events: none;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .tg-sweep { animation: none; opacity: 0; }
+          .tg-glow  { animation: none; opacity: 0.8; transform: none; }
+          .tg-body  { animation: none; transform: none; }
+          .tg-ring  { animation: none; opacity: 0; }
+        }
       `}</style>
     </div>
   )

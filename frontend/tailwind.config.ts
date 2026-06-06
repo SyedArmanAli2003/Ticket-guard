@@ -9,7 +9,18 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sora: ["var(--font-sora)", "sans-serif"],
+        // Space Grotesk for headings / technical chrome, Inter for body.
+        display: ["var(--font-display)", "ui-sans-serif", "system-ui", "sans-serif"],
+        body: ["var(--font-body)", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ["var(--font-body)", "ui-sans-serif", "system-ui", "sans-serif"],
+        // back-compat alias (was `font-sora`)
+        sora: ["var(--font-display)", "sans-serif"],
+      },
+      colors: {
+        trust: {
+          DEFAULT: "hsl(160,84%,46%)",
+          soft: "hsl(160,70%,72%)",
+        },
       },
     },
   },
