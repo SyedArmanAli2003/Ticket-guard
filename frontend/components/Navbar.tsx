@@ -2,10 +2,12 @@
 import { useRouter, usePathname } from "next/navigation"
 import { memo, useEffect, useState } from "react"
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion"
-import { Menu, X, ArrowRight } from "lucide-react"
+import { Menu, X, ArrowRight, User, LogOut, LayoutDashboard } from "lucide-react"
 import { usePrefersReducedMotion, EASE_OUT } from "@/lib/motion"
 import { getMode } from "@/lib/config"
 import ThemeToggle from "@/components/ThemeToggle"
+import { useAuth } from "@/components/AuthProvider"
+import AuthModal from "@/components/AuthModal"
 
 const NAV_LINKS = [
   { label: "How It Works", href: "/#how" },
@@ -38,7 +40,10 @@ function Navbar() {
   const reduced = usePrefersReducedMotion()
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [authOpen, setAuthOpen] = useState(false)
+  const [userMenuOpen, setUserMenuOpen] = useState(false)
   const demoMode = getMode() === "mock"
+  const { user, logout } = useAuth()
 
   // Top scroll-progress bar (premium chrome; static under reduced motion).
   const { scrollYProgress } = useScroll()
@@ -126,9 +131,69 @@ function Navbar() {
             })}
           </div>
 
-          {/* Desktop right cluster: theme toggle + CTA */}
+          {/* Desktop right cluster: theme toggle + auth + CTA */}
           <div className="hidden md:flex items-center gap-3">
             <ThemeToggle />
+
+            {user ? (
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenuOpen(o => !o)}
+                  className="inline-flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors"
+                  style={{ background: "var(--tg-surface-2)", border: "1px solid var(--tg-border-strong)", color: "var(--tg-text)" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "var(--tg-hover)")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "var(--tg-surface-2)")}>
+                  <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold"
+                    style={{ background: "var(--tg-accent-tint-2)", color: "var(--tg-accent)" }}>
+                    {user.name.charAt(0).toUpperCase()}
+                  </div>
+                  <span className="text-sm font-medium">{user.name.split(" ")[0]}</span>
+                </button>
+                <AnimatePresence>
+                  {userMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 8, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                      transition={{ duration: 0.15, ease: EASE_OUT }}
+                      className="absolute right-0 top-full mt-2 w-48 rounded-xl overflow-hidden z-50"
+                      style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-border-strong)", boxShadow: "var(--tg-shadow)" }}>
+                      {user.role === "admin" && (
+                        <button onClick={() => { setUserMenuOpen(false); go("/admin") }}
+                          className="w-full text-left px-4 py-3 text-sm flex items-center gap-2 transition-colors cursor-pointer"
+                          style={{ color: "var(--tg-accent)" }}
+                          onMouseEnter={e => (e.currentTarget.style.background = "var(--tg-hover)")}
+                          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                          <LayoutDashboard size={14} /> Admin Dashboard
+                        </button>
+                      )}
+                      <button onClick={() => { setUserMenuOpen(false); go("/investigate") }}
+                        className="w-full text-left px-4 py-3 text-sm flex items-center gap-2 transition-colors cursor-pointer"
+                        style={{ color: "var(--tg-text-2)" }}
+                        onMouseEnter={e => (e.currentTarget.style.background = "var(--tg-hover)")}
+                        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                        <User size={14} /> My Investigations
+                      </button>
+                      <div style={{ borderTop: "1px solid var(--tg-border)" }} />
+                      <button onClick={() => { setUserMenuOpen(false); logout() }}
+                        className="w-full text-left px-4 py-3 text-sm flex items-center gap-2 transition-colors cursor-pointer"
+                        style={{ color: "var(--tg-risk-high)" }}
+                        onMouseEnter={e => (e.currentTarget.style.background = "var(--tg-risk-high-soft)")}
+                        onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                        <LogOut size={14} /> Sign out
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            ) : (
+              <button onClick={() => setAuthOpen(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-medium px-4 py-2.5 rounded-lg cursor-pointer transition-colors"
+                style={{ background: "var(--tg-surface-2)", color: "var(--tg-text-2)", border: "1px solid var(--tg-border-strong)" }}
+                onMouseEnter={e => (e.currentTarget.style.background = "var(--tg-hover)")}
+                onMouseLeave={e => (e.currentTarget.style.background = "var(--tg-surface-2)")}>
+                <User size={14} /> Sign in
+              </button>
+            )}
+
             <button
               onClick={() => go("/investigate")}
               className="inline-flex items-center gap-1.5 uppercase text-xs tracking-widest font-medium px-6 py-3 rounded-lg cursor-pointer transition-all duration-200 active:scale-[0.97]"
@@ -138,12 +203,12 @@ function Navbar() {
                 border: "1px solid var(--tg-border-strong)",
               }}
               onMouseEnter={e => (e.currentTarget.style.background = "var(--tg-hover)")}
-              onMouseLeave={e => (e.currentTarget.style.background = "var(--tg-surface-3)")}
-            >
+              onMouseLeave={e => (e.currentTarget.style.background = "var(--tg-surface-3)")}>
               Check a listing
               <ArrowRight size={13} strokeWidth={2.4} />
             </button>
           </div>
+
 
           {/* Mobile cluster: theme toggle + menu toggle */}
           <div className="md:hidden flex items-center gap-2">
@@ -221,6 +286,9 @@ function Navbar() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Auth modal */}
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
     </>
   )
 }
