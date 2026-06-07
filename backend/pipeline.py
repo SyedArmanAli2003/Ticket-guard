@@ -135,6 +135,53 @@ def _heuristic_band(rule_out: dict, scorer: dict) -> str:
     return "HIGH" if rule_out.get("violates_official_transfer") else "LOW"
 
 
+_BAND_TO_VERDICT = {"HIGH": "SCAM", "MEDIUM": "SUSPICIOUS", "LOW": "LIKELY-LEGIT"}
+_BAND_CONF = {"HIGH": 0.78, "MEDIUM": 0.6, "LOW": 0.55}
+_LISTING_IGNORE = {"raw", "raw_text", "text", "source", "notes", "summary", "description"}
+
+
+def _listing_signal_count(listing: dict) -> int:
+    """Count meaningful ticket fields the normalizer actually extracted. 0 means
+    the input is NOT a ticket listing/message (e.g. 'hello') and must never get a
+    confident LIKELY-LEGIT verdict."""
+    if not isinstance(listing, dict):
+        return 0
+    n = 0
+    for k, v in listing.items():
+        if k in _LISTING_IGNORE:
+            continue
+        if v in (None, "", [], {}, "unknown", "none", "n/a", "N/A", "null"):
+            continue
+        n += 1
+    return n
+
+
+def _deterministic_verdict(evidence: dict, heuristic_band: str) -> dict:
+    """LLM-free verdict from the deterministic rule engine + scorer signals. Used
+    when every Gemini model is rate-limited/unavailable so the product DEGRADES
+    gracefully (still returns a verdict) instead of erroring (HTTP 429 to users)."""
+    band = heuristic_band if heuristic_band in _BAND_TO_VERDICT else "MEDIUM"
+    bullets: list[str] = []
+    for s in (evidence.get("signals") or []):
+        if isinstance(s, dict):
+            d = s.get("detail") or s.get("label") or s.get("reason")
+            if d:
+                bullets.append(str(d)[:300])
+    if not bullets and (evidence.get("rules") or {}).get("violates_official_transfer"):
+        bullets.append("Listing relies on a non-official transfer and/or irreversible payment.")
+    return {
+        "verdict": _BAND_TO_VERDICT[band],
+        "confidence": _BAND_CONF.get(band, 0.6),
+        "evidence": bullets[:8] or ["Scored by the deterministic risk engine from the detected signals."],
+        "reasoning": ("AI reasoning was temporarily unavailable (high demand), so this verdict comes "
+                      "from TicketGuard's deterministic risk engine over the detected signals. "
+                      "Decision-support only - not a guarantee."),
+        "model_used": "rule-engine",
+        "is_fallback": True,
+        "degraded": True,
+    }
+
+
 async def run_investigation(source: dict, model: str | None = None):
     """Async generator yielding SSE events for one full investigation.
 
@@ -168,6 +215,28 @@ async def run_investigation(source: dict, model: str | None = None):
            "data": {"listing": listing, "source": listing_env.get("source"),
                     "extracted": extracted,
                     "model_used": listing_env.get("model_used")}}
+
+    # ----- Input-sufficiency guard ------------------------------------------- #
+    # If the normalizer found NO ticket fields, the input is not a listing/offer
+    # (e.g. "hello"). Never run a confident verdict on junk (was returning a
+    # fabricated LIKELY-LEGIT @0.8); short-circuit honestly and save LLM quota.
+    if _listing_signal_count(listing) == 0:
+        guard = {
+            "verdict": "SUSPICIOUS", "confidence": 0.2,
+            "evidence": ["No ticket details detected - no price, payment method, event, seller or barcode."],
+            "reasoning": ("This doesn't look like a ticket listing or seller message, so it can't be "
+                          "assessed. Paste the actual offer - the listing text, a seller DM, a ticket "
+                          "PDF/screenshot, or a resale link."),
+            "model_used": "input-guard", "is_fallback": False, "insufficient": True,
+        }
+        evidence["verdict"] = guard
+        yield {"step": 7, "name": "Verdict", "status": "complete", "data": guard}
+        yield {"step": 99, "name": "Saved", "status": "complete",
+               "data": {"verdict": guard["verdict"], "confidence": guard["confidence"],
+                        "investigation_id": "no-db", "risk_score": None,
+                        "engine": f"input-guard - {config.backend_label()}",
+                        "is_fallback": False, "insufficient": True}}
+        return
 
     # ----- Step 2: Hybrid Retrieval (Atlas vector + text, fused) ------------- #
     yield {"step": 2, "name": "Hybrid Retrieval", "status": "running"}
@@ -252,7 +321,7 @@ async def run_investigation(source: dict, model: str | None = None):
         "verdict": verdict,
         "model_used": used_model,
         "is_fallback": verdict.get("is_fallback", False),
-        "engine": f"{used_model} · {config.backend_label()}",
+        "engine": f"{used_model} - {config.backend_label()}",
     }
     inv_id = await asyncio.to_thread(db.save_investigation, inv_doc)
     persist_status = "complete" if inv_id != "no-db" else "not_configured"
@@ -269,7 +338,7 @@ async def run_investigation(source: dict, model: str | None = None):
                     "risk_score": scorer.get("score") if scorer.get("status") == "ok" else None,
                     "model_used": used_model,
                     "is_fallback": verdict.get("is_fallback", False),
-                    "engine": f"{used_model} · {config.backend_label()}"}}
+                    "engine": f"{used_model} - {config.backend_label()}"}}
 
 
 # --------------------------------------------------------------------------- #
@@ -432,7 +501,10 @@ async def _write_verdict(evidence: dict, heuristic_band: str,
             if not _model_unavailable(str(exc)):
                 raise
             continue
-    raise last_exc if last_exc else RuntimeError("verdict failed: no Gemini model available")
+    # Every Gemini tier was rate-limited/unavailable -> DEGRADE to the deterministic
+    # rule engine instead of erroring out (was: raw 429 to the user). The product
+    # still returns a usable, honest verdict; confidence is capped + flagged degraded.
+    return _deterministic_verdict(evidence, heuristic_band)
 
 
 _ALLOWED_VERDICTS = {"SCAM", "SUSPICIOUS", "LIKELY-LEGIT"}

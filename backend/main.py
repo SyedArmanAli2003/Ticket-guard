@@ -105,6 +105,19 @@ async def investigate(req: InvestigateRequest):
     return StreamingResponse(stream(), media_type="text/event-stream", headers=_SSE_HEADERS)
 
 
+def _safe_reason(reason) -> str:
+    """Map upstream/provider errors to a generic, client-safe message — never leak
+    Gemini/ADK stack URLs, 429 billing text, or DB internals to end users."""
+    r = str(reason or "")
+    low = r.lower()
+    if any(k in low for k in ("429", "resource_exhausted", "quota", "rate limit",
+                              "google", "adk", "gemini", "vertex")):
+        return "AI service is busy or at capacity right now. Please try again in a moment."
+    if "atlas" in low or "mongo" in low:
+        return "The database is temporarily unavailable. Please try again shortly."
+    return (r[:160] if r else "Service temporarily unavailable.")
+
+
 # --------------------------------------------------------------------------- #
 # POST /api/check — synchronous JSON verdict (for embedding widgets / API)
 # --------------------------------------------------------------------------- #
@@ -120,6 +133,8 @@ async def check(req: InvestigateRequest):
       {"status":"not_configured"|"error","reason":str,"step":n}
     """
     result = await pipeline.investigate_sync(req.to_source(), req.model)
+    if isinstance(result, dict) and result.get("status") not in ("ok", None):
+        result["reason"] = _safe_reason(result.get("reason"))
     return result
 
 
