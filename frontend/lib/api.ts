@@ -179,3 +179,32 @@ export function fileToDataUri(file: File): Promise<string> {
     fr.readAsDataURL(file)
   })
 }
+
+// ── POST /api/chat — conversational follow-up over a finished investigation ────
+export interface ChatResult {
+  status: "ok" | "not_configured" | "error"
+  reply?: string
+  conversation_id?: string | null
+  persisted?: boolean
+  reason?: string
+}
+
+export async function postChat(body: {
+  messages: { role: string; content: string }[]
+  context?: Record<string, unknown>
+  investigation_id?: string
+  conversation_id?: string | null
+}): Promise<ChatResult> {
+  try {
+    const res = await fetch(API.chat(), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) return { status: "error", reason: json?.reason || `chat ${res.status}` }
+    return json as ChatResult
+  } catch (e) {
+    return { status: "error", reason: e instanceof Error ? e.message : "chat failed" }
+  }
+}

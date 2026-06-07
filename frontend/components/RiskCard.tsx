@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from "framer-motion"
 import { ShieldAlert, AlertTriangle, ShieldCheck, Flag, ArrowRight, CheckCircle2, ExternalLink } from "lucide-react"
 import type { Investigation, RiskLevel } from "@/lib/types"
 import ContributionBars from "@/components/ContributionBars"
-import AskFollowUp from "@/components/AskFollowUp"
 import { useCountUp } from "@/lib/useCountUp"
 import { usePrefersReducedMotion, staggerContainer, cardRise, EASE_OUT } from "@/lib/motion"
 
@@ -368,9 +367,6 @@ export default function RiskCard({
           Decision-support only, not a guarantee — verify the seller independently and pay only through official, protected channels. Risk signals reflect synthetic demo patterns.
         </p>
       </motion.div>
-
-      {/* ✅ NEW: Ask a follow-up section */}
-      <AskFollowUp investigation={investigation} />
     </>
   )
 }

@@ -15,7 +15,7 @@
 
 ### Bug Fixes
 - **`db.py` scorer** — Replaced `$documents` aggregation (unsupported on Atlas M0) with equivalent Python logic
-- **MongoDB URI** — Corrected password in `.env` (`TicketGuard2026`)
+- **MongoDB URI** — Corrected password in `.env` (redacted — `.env` is gitignored, never committed; rotate this credential)
 
 ### Database Seeding
 - Ran `scripts/setup_atlas.py` → seeded **137+ scam patterns**, official rules, and demo hashes

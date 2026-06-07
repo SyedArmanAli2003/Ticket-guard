@@ -12,6 +12,7 @@ import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import PremiumBackground from "@/components/PremiumBackground"
 import { API, isRealMode } from "@/lib/config"
+import { getAuth } from "@/lib/auth"
 // Local storage fallback
 import {
   getUserHistory, deleteHistoryEntry, clearUserHistory,

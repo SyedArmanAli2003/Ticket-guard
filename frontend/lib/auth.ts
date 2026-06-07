@@ -182,6 +182,7 @@ export function login(email: string, password: string): LoginResult {
     (u) => u.email.toLowerCase() === email.toLowerCase() && u.password === password
   )
   if (!found) return { ok: false, error: "Invalid email or password." }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password: _pw, ...user } = found
   const token = btoa(`${user.id}:${Date.now()}`)
   setAuth({ user, token })
@@ -204,6 +205,7 @@ export function register(name: string, email: string, password: string): Registe
   }
   users.push(newUser)
   saveUsers(users)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { password: _pw, ...user } = newUser
   const token = btoa(`${user.id}:${Date.now()}`)
   setAuth({ user, token })
@@ -216,5 +218,6 @@ export function logout() {
 
 /** Return all users (admin only) */
 export function getAllUsers(): AuthUser[] {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   return getStoredUsers().map(({ password: _pw, ...u }) => u)
 }

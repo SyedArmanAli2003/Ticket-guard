@@ -29,11 +29,11 @@ export default function AuthModal({ open, onClose, defaultTab = "login" }: AuthM
     setLoading(true)
     await new Promise(r => setTimeout(r, 300)) // micro-delay for UX
     if (tab === "login") {
-      const result = login(email, password)
+      const result = await login(email, password)
       if (result.ok) { reset(); onClose() }
       else setError(result.error || "Login failed.")
     } else {
-      const result = register(name, email, password)
+      const result = await register(name, email, password)
       if (result.ok) { reset(); onClose() }
       else setError(result.error || "Registration failed.")
     }

@@ -29,11 +29,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
+import chat
 import config
 import db
 import pipeline
 import models_registry as registry
-from models import InvestigateRequest, ReportRequest
+from models import InvestigateRequest, ReportRequest, ChatRequest
 
 # SSE headers: disable proxy buffering so events flush immediately.
 _SSE_HEADERS = {
@@ -120,6 +121,38 @@ async def check(req: InvestigateRequest):
     """
     result = await pipeline.investigate_sync(req.to_source(), req.model)
     return result
+
+
+# --------------------------------------------------------------------------- #
+# POST /api/chat — conversational follow-up over a finished investigation
+# --------------------------------------------------------------------------- #
+@app.post("/api/chat")
+async def chat_endpoint(req: ChatRequest):
+    """Answer a follow-up question grounded in a prior investigation.
+
+    Resolves context (from Atlas by `investigation_id` when available, else the
+    client-supplied `context` bundle), asks Gemini, and — when Atlas is up —
+    persists the turn to the `conversations` collection so memory survives across
+    sessions. Returns {"status":"ok","reply","conversation_id","persisted"} or a
+    not_configured/error envelope (never a fabricated reply).
+    """
+    context = req.context or {}
+    if req.investigation_id:
+        inv = await asyncio.to_thread(db.get_investigation, req.investigation_id)
+        if inv:
+            context = inv
+    msgs = [m.model_dump() for m in req.messages]
+    result = await asyncio.to_thread(chat.answer, context, msgs)
+    if result.get("status") != "ok":
+        return result
+
+    cid = await asyncio.to_thread(
+        db.append_conversation, req.conversation_id, req.investigation_id,
+        [msgs[-1], {"role": "assistant", "content": result["reply"]}])
+    persisted = cid not in (None, "no-db")
+    return {"status": "ok", "reply": result["reply"],
+            "conversation_id": cid if persisted else req.conversation_id,
+            "persisted": persisted}
 
 
 # --------------------------------------------------------------------------- #

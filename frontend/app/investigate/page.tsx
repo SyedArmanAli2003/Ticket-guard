@@ -6,6 +6,7 @@ import { Sparkles, ArrowRight, ArrowLeft, Search, Upload, Link2, FileText, Alert
 import Navbar from "@/components/Navbar"
 import InvestigationStep from "@/components/InvestigationStep"
 import RiskCard from "@/components/RiskCard"
+import ChatPanel from "@/components/ChatPanel"
 import LiveFeed from "@/components/LiveFeed"
 import HealthStrip from "@/components/HealthStrip"
 import Footer from "@/components/Footer"
@@ -32,7 +33,7 @@ import {
   seedFeed,
   feedItemFromInvestigation,
 } from "@/lib/mock"
-import { getMode, API, isRealMode } from "@/lib/config"
+import { getMode, API } from "@/lib/config"
 import { getHealth, investigateStream, postReport, openFeed, fileToDataUri } from "@/lib/api"
 import {
   freshRealSteps,
@@ -136,18 +137,6 @@ function InvestigateContent() {
     return () => { alive = false; ctrl.abort(); close() }
   }, [isMock, isReal])
 
-  // ── ?q= URL param ──
-  useEffect(() => {
-    const q = searchParams.get("q")
-    // Only run if q exists and we haven't already populated it for this specific query
-    if (q && text !== q) {
-      setIngest("text")
-      setText(q)
-      if (isMock) runMock(q)
-      else runReal({ type: "text", text: q, model: selectedModel }, q)
-    }
-  }, [searchParams, isMock, isReal, text, runMock, runReal]) // removed submitted dependency to allow re-runs
-
   const freshMockSteps = (): AgentStep[] =>
     STEP_DEFS.map((d, i) => ({ stepNumber: i + 1, name: d.name, status: "waiting", tool: d.tool, kind: "mock" }))
 
@@ -173,7 +162,7 @@ function InvestigateContent() {
     const histEntry = {
       userId: user?.id ?? null,
       query: input,
-      queryType: "text",
+      queryType: "text" as const,
       verdict: inv.riskLevel,
       score: inv.riskScore,
       rationale: inv.rationale,
@@ -334,6 +323,18 @@ function InvestigateContent() {
       )
     }
   }, [isRunning, isMock, isReal, ingest, text, url, file, runMock, runReal])
+
+  // ── ?q= URL param (deep-link a query, e.g. from history "re-run") ──
+  useEffect(() => {
+    const q = searchParams.get("q")
+    if (q && text !== q) {
+      setIngest("text")
+      setText(q)
+      if (isMock) runMock(q)
+      else if (isReal) runReal({ type: "text", text: q, model: selectedModel }, q)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, isMock, isReal, text, runMock, runReal])
 
   // ── deep links (?demo=true / ?example=<id>) — only meaningful with text input ──
   useEffect(() => {
@@ -652,6 +653,7 @@ function InvestigateContent() {
                   {result && !isRunning && (
                     <motion.div className="mt-5" initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                       <RiskCard investigation={result} onReport={handleReport} reported={reported} />
+                      <ChatPanel investigation={result} mode={mode} investigationId={isReal ? realAcc.current.investigationId : undefined} />
                     </motion.div>
                   )}
                 </AnimatePresence>
