@@ -544,3 +544,22 @@ h1, h2, h3, .font-display { font-family: var(--font-display), ui-sans-serif, sys
   .tg-body  { animation: none; transform: none; }
   .tg-ring  { animation: none; opacity: 0; }
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Accessibility — visible keyboard focus ring on EVERY interactive element.
+   Mouse clicks don't trigger :focus-visible, so this only appears for keyboard
+   (Tab) navigation — no visual change for mouse users, full a11y for keyboard.
+   ════════════════════════════════════════════════════════════════════════════ */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--tg-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+/* Kill the default ring only when NOT keyboard-focusing (mouse/touch). */
+:focus:not(:focus-visible) { outline: none; }

@@ -189,7 +189,7 @@ export default function HeroSection() {
             {TRUST_CHIPS.map((chip, i) => (
               <motion.span
                 key={chip}
-                initial={reduced ? false : { opacity: 0, y: 8 }}
+                initial={reduced ? false : { opacity: 1, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: reduced ? 0 : 0.7 + i * 0.07, duration: 0.45, ease: EASE_OUT }}
                 whileHover={reduced ? undefined : { y: -2 }}
