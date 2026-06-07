@@ -297,8 +297,14 @@ h1, h2, h3, .font-display { font-family: var(--font-display), ui-sans-serif, sys
    wrapper rests at `transform: none` — critical so it never creates a containing
    block that would trap the page's fixed deep-field backdrop. */
 @keyframes routeEnter {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; }
+  /* opacity is intentionally NOT animated. This class wraps the ENTIRE page, and
+     with animation-fill-mode:both an opacity:0 "from" frame pins the whole page
+     invisible/dim whenever the animation is paused or hasn't completed
+     (backgrounded load, throttled tab, slow device). Page visibility must NEVER
+     depend on an animation finishing — so we animate transform only; the wrapper
+     is always opacity:1. */
+  from { transform: translateY(8px); }
+  to   { transform: translateY(0); }
 }
 .route-enter { animation: routeEnter 0.42s cubic-bezier(0.16,1,0.3,1) both; }
 
