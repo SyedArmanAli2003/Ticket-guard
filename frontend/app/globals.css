@@ -381,7 +381,10 @@ h1, h2, h3, .font-display { font-family: var(--font-display), ui-sans-serif, sys
    under prefers-reduced-motion (see the media query below).
    ════════════════════════════════════════════════════════════════════════════ */
 .tg-field {
-  position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+  /* z-index MUST be negative: the backdrop is portaled into <body> AFTER the page
+     content, so at z-index:0 it painted ON TOP and blanked the whole site. -1 puts
+     it behind normal-flow content (still above the html/body canvas bg). */
+  position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
   contain: strict;
 }
 
