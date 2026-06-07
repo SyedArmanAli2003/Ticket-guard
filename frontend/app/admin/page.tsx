@@ -12,7 +12,7 @@ import { getAllUsers, getAuth } from "@/lib/auth"
 import type { AuthUser } from "@/lib/auth"
 import { getHealth } from "@/lib/api"
 import { getMode, API } from "@/lib/config"
-import { EASE_OUT, staggerContainer, fadeUpItem } from "@/lib/motion"
+import { EASE_OUT, staggerContainer, fadeUpItem, usePrefersReducedMotion } from "@/lib/motion"
 import { useRouter } from "next/navigation"
 
 interface StatCard {
@@ -23,17 +23,19 @@ interface StatCard {
   sub?: string
 }
 
-function StatBox({ card }: { card: StatCard }) {
+function StatBox({ card, reduced }: { card: StatCard; reduced: boolean }) {
   return (
     <motion.div variants={fadeUpItem}
+      whileHover={reduced ? undefined : { y: -3, borderColor: "var(--tg-border-strong)", boxShadow: "var(--tg-shadow-lg)" }}
+      transition={{ duration: 0.25, ease: EASE_OUT }}
       className="rounded-2xl p-5"
-      style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-border-strong)" }}>
+      style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-border)" }}>
       <div className="flex items-start justify-between mb-3">
         <div className="p-2 rounded-xl" style={{ background: `color-mix(in srgb, ${card.color} 12%, transparent)` }}>
           {card.icon}
         </div>
       </div>
-      <p className="text-3xl font-bold font-display mb-1" style={{ color: card.color }}>{card.value}</p>
+      <p className="text-3xl font-bold font-display mb-1 tracking-tight" style={{ color: card.color }}>{card.value}</p>
       <p className="text-sm font-medium" style={{ color: "var(--tg-text)" }}>{card.label}</p>
       {card.sub && <p className="text-xs mt-0.5" style={{ color: "var(--tg-text-3)" }}>{card.sub}</p>}
     </motion.div>
@@ -64,6 +66,7 @@ const VERDICT_ICONS: Record<string, React.ReactNode> = {
 export default function AdminPage() {
   const { user, logout } = useAuth()
   const router = useRouter()
+  const reduced = usePrefersReducedMotion()
   const [users, setUsers] = useState<AuthUser[]>([])
   const [health, setHealth] = useState<Record<string, unknown> | null>(null)
   const [healthLoading, setHealthLoading] = useState(true)
@@ -177,8 +180,8 @@ export default function AdminPage() {
 
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: EASE_OUT }}
+          initial={reduced ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: EASE_OUT }}
           className="flex items-center justify-between mb-8 flex-wrap gap-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
@@ -194,34 +197,40 @@ export default function AdminPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={handleRefresh}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all"
+            <motion.button onClick={handleRefresh} disabled={refreshing}
+              whileHover={reduced || refreshing ? undefined : { y: -1, color: "var(--tg-text)", borderColor: "var(--tg-border-strong)" }}
+              whileTap={reduced || refreshing ? undefined : { scale: 0.97 }}
+              transition={{ duration: 0.2, ease: EASE_OUT }}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer disabled:cursor-default"
               style={{ background: "var(--tg-surface)", color: "var(--tg-text-2)", border: "1px solid var(--tg-border-strong)" }}>
               <RefreshCw size={14} className={refreshing ? "animate-spin" : ""} />
               Refresh
-            </button>
-            <button onClick={() => { logout(); router.push("/") }}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all"
+            </motion.button>
+            <motion.button onClick={() => { logout(); router.push("/") }}
+              whileHover={reduced ? undefined : { y: -1 }}
+              whileTap={reduced ? undefined : { scale: 0.97 }}
+              transition={{ duration: 0.2, ease: EASE_OUT }}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer"
               style={{ background: "var(--tg-risk-high-soft)", color: "var(--tg-risk-high)", border: "1px solid var(--tg-risk-high-border)" }}>
               <LogOut size={14} />
               Sign out
-            </button>
+            </motion.button>
           </div>
         </motion.div>
 
         {/* Stats grid */}
         <motion.div
           variants={staggerContainer(0.06, 0.05)}
-          initial="hidden" animate="show"
+          initial={reduced ? false : "hidden"} animate="show"
           className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          {stats.map(card => <StatBox key={card.label} card={card} />)}
+          {stats.map(card => <StatBox key={card.label} card={card} reduced={reduced} />)}
         </motion.div>
 
         <div className="grid lg:grid-cols-[1fr_320px] gap-6">
           {/* Recent Investigations */}
           <motion.div
-            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.15 }}
+            initial={reduced ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, ease: EASE_OUT, delay: reduced ? 0 : 0.15 }}
             className="rounded-2xl overflow-hidden"
             style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-border-strong)" }}>
             <div className="flex items-center justify-between px-6 py-4 border-b" style={{ borderColor: "var(--tg-border)" }}>
@@ -229,18 +238,28 @@ export default function AdminPage() {
                 <BarChart3 size={16} style={{ color: "var(--tg-accent)" }} />
                 <h2 className="font-semibold" style={{ color: "var(--tg-text)" }}>Recent Investigations</h2>
               </div>
-              <span className="text-xs px-2 py-1 rounded-full" style={{ background: "var(--tg-surface-2)", color: "var(--tg-text-3)" }}>
+              <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium" style={{ background: "var(--tg-risk-low-soft)", color: "var(--tg-risk-low)" }}>
+                <motion.span
+                  className="w-1.5 h-1.5 rounded-full"
+                  style={{ background: "var(--tg-risk-low)" }}
+                  animate={reduced ? undefined : { opacity: [1, 0.35, 1] }}
+                  transition={reduced ? undefined : { duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                />
                 Live
               </span>
             </div>
-            <div className="divide-y" style={{ borderColor: "var(--tg-border)" }}>
+            <motion.div
+              variants={staggerContainer(0.05, reduced ? 0 : 0.2)}
+              initial={reduced ? false : "hidden"} animate="show"
+              className="divide-y" style={{ borderColor: "var(--tg-border)" }}>
               {MOCK_INVESTIGATIONS.map(inv => {
                 const color = VERDICT_COLORS[inv.verdict]
                 return (
-                  <div key={inv.id} className="px-6 py-4 flex items-start justify-between gap-4"
-                    style={{ transition: "background 0.15s" }}
-                    onMouseEnter={e => (e.currentTarget.style.background = "var(--tg-hover)")}
-                    onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
+                  <motion.div key={inv.id}
+                    variants={fadeUpItem}
+                    whileHover={reduced ? undefined : { backgroundColor: "var(--tg-hover)" }}
+                    transition={{ duration: 0.2, ease: EASE_OUT }}
+                    className="px-6 py-4 flex items-start justify-between gap-4">
                     <div className="flex items-start gap-3 min-w-0">
                       <div className="mt-0.5 flex-shrink-0 p-1.5 rounded-lg" style={{ background: `color-mix(in srgb, ${color} 12%, transparent)`, color }}>
                         {VERDICT_ICONS[inv.verdict]}
@@ -263,18 +282,18 @@ export default function AdminPage() {
                       <Clock size={11} />
                       {inv.time}
                     </div>
-                  </div>
+                  </motion.div>
                 )
               })}
-            </div>
+            </motion.div>
           </motion.div>
 
           {/* Side panels */}
           <div className="space-y-4">
             {/* System Health */}
             <motion.div
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.2 }}
+              initial={reduced ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, ease: EASE_OUT, delay: reduced ? 0 : 0.2 }}
               className="rounded-2xl overflow-hidden"
               style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-border-strong)" }}>
               <div className="flex items-center gap-2 px-5 py-4 border-b" style={{ borderColor: "var(--tg-border)" }}>
@@ -295,7 +314,10 @@ export default function AdminPage() {
                       return (
                         <div key={key} className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ background: ok ? "var(--tg-risk-low)" : "var(--tg-risk-high)" }} />
+                            <motion.div className="w-2 h-2 rounded-full" style={{ background: ok ? "var(--tg-risk-low)" : "var(--tg-risk-high)" }}
+                              animate={reduced || !ok ? undefined : { opacity: [1, 0.4, 1] }}
+                              transition={reduced || !ok ? undefined : { duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                            />
                             <span className="text-sm" style={{ color: "var(--tg-text-2)" }}>{label}</span>
                           </div>
                           <span className="text-xs font-medium" style={{ color: ok ? "var(--tg-risk-low)" : "var(--tg-risk-high)" }}>
@@ -321,8 +343,8 @@ export default function AdminPage() {
 
             {/* Users */}
             <motion.div
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.25 }}
+              initial={reduced ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, ease: EASE_OUT, delay: reduced ? 0 : 0.25 }}
               className="rounded-2xl overflow-hidden"
               style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-border-strong)" }}>
               <div className="flex items-center gap-2 px-5 py-4 border-b" style={{ borderColor: "var(--tg-border)" }}>
@@ -356,8 +378,8 @@ export default function AdminPage() {
 
             {/* Quick Actions */}
             <motion.div
-              initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, ease: EASE_OUT, delay: 0.3 }}
+              initial={reduced ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45, ease: EASE_OUT, delay: reduced ? 0 : 0.3 }}
               className="rounded-2xl overflow-hidden"
               style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-border-strong)" }}>
               <div className="flex items-center gap-2 px-5 py-4 border-b" style={{ borderColor: "var(--tg-border)" }}>
@@ -365,18 +387,24 @@ export default function AdminPage() {
                 <h2 className="font-semibold text-sm" style={{ color: "var(--tg-text)" }}>Quick Actions</h2>
               </div>
               <div className="p-4 space-y-2">
-                <a href="/investigate"
-                  className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium cursor-pointer transition-all flex items-center gap-2"
+                <motion.a href="/investigate"
+                  whileHover={reduced ? undefined : { x: 3 }}
+                  whileTap={reduced ? undefined : { scale: 0.98 }}
+                  transition={{ duration: 0.2, ease: EASE_OUT }}
+                  className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium cursor-pointer flex items-center gap-2"
                   style={{ background: "var(--tg-accent-tint-2)", color: "var(--tg-accent)", border: "1px solid var(--tg-accent-border)" }}>
                   <Eye size={14} />
                   Check a listing
-                </a>
-                <a href="/"
-                  className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium cursor-pointer transition-all flex items-center gap-2"
+                </motion.a>
+                <motion.a href="/"
+                  whileHover={reduced ? undefined : { x: 3, borderColor: "var(--tg-border-strong)" }}
+                  whileTap={reduced ? undefined : { scale: 0.98 }}
+                  transition={{ duration: 0.2, ease: EASE_OUT }}
+                  className="w-full text-left px-4 py-3 rounded-xl text-sm font-medium cursor-pointer flex items-center gap-2"
                   style={{ background: "var(--tg-surface-2)", color: "var(--tg-text-2)", border: "1px solid var(--tg-border-strong)" }}>
                   <Shield size={14} />
                   View homepage
-                </a>
+                </motion.a>
               </div>
             </motion.div>
           </div>

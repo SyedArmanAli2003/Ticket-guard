@@ -286,6 +286,8 @@ function StepData({ stepNumber, data, reduced }: { stepNumber: number; data: Rec
           <motion.span
             key={i}
             variants={chipSlideIn}
+            whileHover={reduced ? undefined : { y: -1 }}
+            transition={{ duration: 0.2, ease: EASE_OUT }}
             className="text-xs px-2.5 py-1 rounded-full inline-flex items-center gap-1.5"
             style={{
               background: e.flagged ? "var(--tg-risk-high-soft)" : "var(--tg-green-tint)",
@@ -307,17 +309,23 @@ function StepData({ stepNumber, data, reduced }: { stepNumber: number; data: Rec
     const matches = (data.matches as HybridMatch[] | undefined) || []
     return (
       <div>
-        <div className="flex flex-wrap gap-2 mb-3">
-          <span className="text-xs px-2 py-0.5 rounded-md" style={{ background: "var(--tg-info-tint)", color: "var(--tg-info)", border: "1px solid var(--tg-info-border)" }}>
-            $vectorSearch · knnBeta
-          </span>
-          <span className="text-xs px-2 py-0.5 rounded-md" style={{ background: "var(--tg-green-tint)", color: "var(--tg-green)", border: "1px solid var(--tg-green-border)" }}>
-            $search · text
-          </span>
-          <span className="text-xs px-2 py-0.5 rounded-md" style={{ background: "var(--tg-hover)", color: "var(--tg-text-3)", border: "1px solid var(--tg-border-strong)" }}>
-            $unionWith · rank fusion
-          </span>
-        </div>
+        <motion.div
+          className="flex flex-wrap gap-2 mb-3"
+          variants={staggerContainer(0.06)}
+          initial={reduced ? false : "hidden"}
+          animate="show"
+        >
+          {[
+            { label: "$vectorSearch · knnBeta", bg: "var(--tg-info-tint)", color: "var(--tg-info)", border: "var(--tg-info-border)" },
+            { label: "$search · text", bg: "var(--tg-green-tint)", color: "var(--tg-green)", border: "var(--tg-green-border)" },
+            { label: "$unionWith · rank fusion", bg: "var(--tg-hover)", color: "var(--tg-text-3)", border: "var(--tg-border-strong)" },
+          ].map(p => (
+            <motion.span key={p.label} variants={chipSlideIn} className="text-xs px-2 py-0.5 rounded-md font-mono"
+              style={{ background: p.bg, color: p.color, border: `1px solid ${p.border}` }}>
+              {p.label}
+            </motion.span>
+          ))}
+        </motion.div>
         <motion.div
           className="space-y-2.5"
           variants={staggerContainer(0.07)}
@@ -328,6 +336,8 @@ function StepData({ stepNumber, data, reduced }: { stepNumber: number; data: Rec
             <motion.div
               key={i}
               variants={cardRise}
+              whileHover={reduced ? undefined : { y: -2, borderColor: "var(--tg-border-strong)" }}
+              transition={{ duration: 0.22, ease: EASE_OUT }}
               className="rounded-xl p-3 flex items-center justify-between gap-3"
               style={{ background: "var(--tg-surface-2)", border: "1px solid var(--tg-border)" }}
             >
@@ -361,15 +371,14 @@ function StepData({ stepNumber, data, reduced }: { stepNumber: number; data: Rec
           <span className="text-sm mb-1" style={{ color: "var(--tg-text-3)" }}>/100</span>
         </div>
         <div className="flex-1 h-2 rounded-full overflow-hidden" style={{ background: "var(--tg-track-2)" }}>
+          {/* Bar width tracks the actual score (0–100), animated in like ContributionBars. */}
           <motion.div
             className="h-full rounded-full"
-            style={{ background: color, boxShadow: `0 0 10px ${tint(color, 60)}`, transformOrigin: "left center" }}
-            initial={{ scaleX: reduced ? 1 : 0 }}
-            animate={{ scaleX: 1 }}
-            transition={{ duration: reduced ? 0 : 0.7, ease: EASE_OUT }}
-          >
-            <div style={{ width: `${score}%`, height: "100%" }} />
-          </motion.div>
+            style={{ background: color, boxShadow: `0 0 10px ${tint(color, 60)}` }}
+            initial={{ width: reduced ? `${score}%` : 0 }}
+            animate={{ width: `${score}%` }}
+            transition={{ duration: reduced ? 0 : 0.8, ease: EASE_OUT, delay: reduced ? 0 : 0.1 }}
+          />
         </div>
         <span className="text-xs px-2 py-0.5 rounded-full font-medium"
           style={{ background: tint(color, 13), color, border: `1px solid ${tint(color, 27)}` }}>
@@ -401,9 +410,26 @@ function StepData({ stepNumber, data, reduced }: { stepNumber: number; data: Rec
     const level = data.riskLevel as string
     const color = riskColorVar(level)
     return (
-      <p className="text-sm italic pl-3" style={{ borderLeft: `2px solid ${color}`, color: "var(--tg-text)", lineHeight: 1.5 }}>
-        {rationale}
-      </p>
+      <div className="relative pl-3">
+        {/* accent rule draws in from the top */}
+        <motion.span
+          aria-hidden
+          className="absolute left-0 top-0 bottom-0 rounded-full"
+          style={{ width: 2, background: color, transformOrigin: "top" }}
+          initial={{ scaleY: reduced ? 1 : 0 }}
+          animate={{ scaleY: 1 }}
+          transition={{ duration: reduced ? 0 : 0.5, ease: EASE_OUT }}
+        />
+        <motion.p
+          className="text-sm italic"
+          style={{ color: "var(--tg-text)", lineHeight: 1.5 }}
+          initial={reduced ? false : { opacity: 0, x: -4 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: reduced ? 0 : 0.45, ease: EASE_OUT, delay: reduced ? 0 : 0.12 }}
+        >
+          {rationale}
+        </motion.p>
+      </div>
     )
   }
 

@@ -7,7 +7,7 @@ import {
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/components/AuthProvider"
-import { fadeUpItem, staggerContainer, EASE_OUT } from "@/lib/motion"
+import { fadeUpItem, staggerContainer, EASE_OUT, SPRING_SOFT, usePrefersReducedMotion } from "@/lib/motion"
 import Navbar from "@/components/Navbar"
 import Footer from "@/components/Footer"
 import PremiumBackground from "@/components/PremiumBackground"
@@ -62,6 +62,7 @@ function normalizeEntry(e: Record<string, unknown>): HistoryEntry {
 export default function HistoryPage() {
   const { user } = useAuth()
   const router = useRouter()
+  const reduced = usePrefersReducedMotion()
   const [entries, setEntries] = useState<HistoryEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [dbMode, setDbMode] = useState<"mongo" | "local" | "none">("none")
@@ -164,8 +165,8 @@ export default function HistoryPage() {
       <div className="flex-1 relative z-10 max-w-3xl mx-auto w-full px-4 sm:px-6 pt-28 pb-8">
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: EASE_OUT }}
+          initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: EASE_OUT }}
           className="flex items-center justify-between mb-6 flex-wrap gap-3"
         >
           <div>
@@ -191,45 +192,57 @@ export default function HistoryPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={fetchHistory} title="Refresh"
-              className="p-2 rounded-xl cursor-pointer transition-colors"
-              style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-border-strong)", color: "var(--tg-text-2)" }}
-              onMouseEnter={e => (e.currentTarget.style.color = "var(--tg-accent)")}
-              onMouseLeave={e => (e.currentTarget.style.color = "var(--tg-text-2)")}>
+            <motion.button onClick={fetchHistory} title="Refresh" aria-label="Refresh history"
+              whileHover={reduced ? undefined : { y: -1, color: "var(--tg-accent)", borderColor: "var(--tg-accent-border)" }}
+              whileTap={reduced ? undefined : { scale: 0.94, rotate: -45 }}
+              transition={{ duration: 0.2, ease: EASE_OUT }}
+              className="p-2 rounded-xl cursor-pointer"
+              style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-border-strong)", color: "var(--tg-text-2)" }}>
               <RefreshCw size={15} />
-            </button>
+            </motion.button>
             {entries.length > 0 && (
-              <button onClick={handleClearAll}
+              <motion.button onClick={handleClearAll}
+                whileHover={reduced ? undefined : { y: -1 }}
+                whileTap={reduced ? undefined : { scale: 0.96 }}
+                transition={{ duration: 0.2, ease: EASE_OUT }}
                 className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-colors"
                 style={{ background: "var(--tg-risk-high-soft)", color: "var(--tg-risk-high)", border: "1px solid var(--tg-risk-high-border)" }}>
                 <Trash2 size={14} /> Clear all
-              </button>
+              </motion.button>
             )}
           </div>
         </motion.div>
 
         {/* Not logged in */}
         {!user && !loading && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          <motion.div
+            initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: EASE_OUT }}
             className="text-center py-20 rounded-2xl"
             style={{ border: "1px dashed var(--tg-border-strong)" }}>
             <Shield size={32} className="mx-auto mb-3" style={{ color: "var(--tg-text-3)" }} />
             <p className="text-sm font-medium mb-1" style={{ color: "var(--tg-text-2)" }}>Sign in to see your history</p>
             <p className="text-xs mb-4" style={{ color: "var(--tg-text-3)" }}>Your investigations are saved per account.</p>
-            <button onClick={() => router.push("/investigate")}
+            <motion.button onClick={() => router.push("/investigate")}
+              whileHover={reduced ? undefined : { y: -1, boxShadow: "0 8px 22px var(--tg-accent-glow)" }}
+              whileTap={reduced ? undefined : { scale: 0.97 }}
+              transition={{ duration: 0.2, ease: EASE_OUT }}
               className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer"
               style={{ background: "var(--tg-accent)", color: "var(--tg-on-accent)" }}>
               Check a listing
-            </button>
+            </motion.button>
           </motion.div>
         )}
 
         {/* Loading */}
         {loading && (
-          <div className="flex items-center justify-center py-20 gap-3" style={{ color: "var(--tg-text-3)" }}>
+          <motion.div
+            initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, ease: EASE_OUT }}
+            className="flex items-center justify-center py-20 gap-3" style={{ color: "var(--tg-text-3)" }}>
             <Loader2 size={20} className="animate-spin" />
             <span className="text-sm">Loading history…</span>
-          </div>
+          </motion.div>
         )}
 
         {/* Content */}
@@ -237,33 +250,47 @@ export default function HistoryPage() {
           <>
             {/* Search + filter */}
             <motion.div
-              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35, ease: EASE_OUT, delay: 0.05 }}
+              initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, ease: EASE_OUT, delay: reduced ? 0 : 0.06 }}
               className="flex flex-col sm:flex-row gap-3 mb-6">
               <div className="relative flex-1">
-                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "var(--tg-text-3)" }} />
+                <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: "var(--tg-text-3)" }} />
                 <input value={search} onChange={e => setSearch(e.target.value)}
                   placeholder="Search your queries…"
                   className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm outline-none"
-                  style={{ background: "var(--tg-surface)", color: "var(--tg-text)", border: "1px solid var(--tg-border-strong)" }}
-                  onFocus={e => (e.target.style.borderColor = "var(--tg-accent)")}
-                  onBlur={e => (e.target.style.borderColor = "var(--tg-border-strong)")}
+                  style={{ background: "var(--tg-surface)", color: "var(--tg-text)", border: "1px solid var(--tg-border-strong)", transition: "border-color 0.2s ease, box-shadow 0.2s ease" }}
+                  onFocus={e => { e.target.style.borderColor = "var(--tg-accent)"; e.target.style.boxShadow = "0 0 0 3px var(--tg-accent-tint-2)" }}
+                  onBlur={e => { e.target.style.borderColor = "var(--tg-border-strong)"; e.target.style.boxShadow = "none" }}
                 />
               </div>
               <div className="flex gap-1.5 flex-wrap">
                 {(["ALL", "HIGH", "MEDIUM", "LOW"] as const).map(f => {
                   const active = filter === f
                   const c = f === "ALL" ? "var(--tg-accent)" : VERDICT_CONFIG[f as keyof typeof VERDICT_CONFIG].color
+                  const activeBg = f === "ALL" ? "var(--tg-accent-tint-2)" : VERDICT_CONFIG[f as keyof typeof VERDICT_CONFIG].soft
+                  const activeBorder = f === "ALL" ? "var(--tg-accent-border)" : VERDICT_CONFIG[f as keyof typeof VERDICT_CONFIG].border
                   return (
-                    <button key={f} onClick={() => setFilter(f)}
-                      className="px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all"
+                    <motion.button key={f} onClick={() => setFilter(f)}
+                      whileHover={reduced || active ? undefined : { y: -1, color: "var(--tg-text-2)" }}
+                      whileTap={reduced ? undefined : { scale: 0.95 }}
+                      transition={{ duration: 0.18, ease: EASE_OUT }}
+                      className="relative px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer"
                       style={{
-                        background: active ? (f === "ALL" ? "var(--tg-accent-tint-2)" : VERDICT_CONFIG[f as keyof typeof VERDICT_CONFIG].soft) : "var(--tg-surface)",
                         color: active ? c : "var(--tg-text-3)",
-                        border: `1px solid ${active ? (f === "ALL" ? "var(--tg-accent-border)" : VERDICT_CONFIG[f as keyof typeof VERDICT_CONFIG].border) : "var(--tg-border-strong)"}`,
+                        border: `1px solid ${active ? activeBorder : "var(--tg-border-strong)"}`,
+                        background: active ? "transparent" : "var(--tg-surface)",
+                        transition: "color 0.2s ease, border-color 0.2s ease",
                       }}>
-                      {f} ({counts[f]})
-                    </button>
+                      {active && (
+                        <motion.span
+                          layoutId={reduced ? undefined : "history-filter-pill"}
+                          className="absolute inset-0 rounded-xl -z-0"
+                          style={{ background: activeBg }}
+                          transition={reduced ? { duration: 0 } : SPRING_SOFT}
+                        />
+                      )}
+                      <span className="relative z-10">{f} ({counts[f]})</span>
+                    </motion.button>
                   )
                 })}
               </div>
@@ -272,7 +299,8 @@ export default function HistoryPage() {
             {/* Entries */}
             {filtered.length === 0 ? (
               <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                initial={reduced ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, ease: EASE_OUT }}
                 className="text-center py-20 rounded-2xl"
                 style={{ border: "1px dashed var(--tg-border-strong)" }}>
                 <History size={32} className="mx-auto mb-3" style={{ color: "var(--tg-text-3)" }} />
@@ -283,17 +311,20 @@ export default function HistoryPage() {
                   {entries.length === 0 ? "Run an investigation to see your history here." : "Try a different search or filter."}
                 </p>
                 {entries.length === 0 && (
-                  <button onClick={() => router.push("/investigate")}
+                  <motion.button onClick={() => router.push("/investigate")}
+                    whileHover={reduced ? undefined : { y: -1, boxShadow: "0 8px 22px var(--tg-accent-glow)" }}
+                    whileTap={reduced ? undefined : { scale: 0.97 }}
+                    transition={{ duration: 0.2, ease: EASE_OUT }}
                     className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer"
                     style={{ background: "var(--tg-accent)", color: "var(--tg-on-accent)" }}>
                     Check a listing
-                  </button>
+                  </motion.button>
                 )}
               </motion.div>
             ) : (
               <motion.div
-                variants={staggerContainer(0.04, 0)}
-                initial="hidden" animate="show"
+                variants={staggerContainer(0.05, 0)}
+                initial={reduced ? false : "hidden"} animate="show"
                 className="space-y-3">
                 <AnimatePresence mode="popLayout">
                   {filtered.map(entry => {
@@ -301,13 +332,15 @@ export default function HistoryPage() {
                     const VIcon = cfg.Icon
                     return (
                       <motion.div key={entry.id}
-                        layout
+                        layout={!reduced}
                         variants={fadeUpItem}
-                        initial="hidden"
+                        initial={reduced ? false : "hidden"}
                         animate="show"
-                        exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                        exit={reduced ? { opacity: 0 } : { opacity: 0, height: 0, marginTop: 0, scale: 0.98 }}
+                        whileHover={reduced ? undefined : { y: -2, borderColor: "var(--tg-border-strong)", boxShadow: "var(--tg-shadow-lg)" }}
+                        transition={{ duration: 0.25, ease: EASE_OUT }}
                         className="rounded-2xl p-5"
-                        style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-border-strong)" }}>
+                        style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-border)" }}>
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex items-start gap-3 min-w-0 flex-1">
                             {/* Verdict icon */}
@@ -356,23 +389,29 @@ export default function HistoryPage() {
                           </div>
                           {/* Actions */}
                           <div className="flex items-center gap-2 flex-shrink-0">
-                            <button
+                            <motion.button
                               onClick={() => router.push(`/investigate?q=${encodeURIComponent(entry.query)}`)}
-                              title="Re-investigate"
+                              title="Re-investigate" aria-label="Re-investigate"
+                              whileHover={reduced ? undefined : { scale: 1.08 }}
+                              whileTap={reduced ? undefined : { scale: 0.9 }}
+                              transition={{ duration: 0.18, ease: EASE_OUT }}
                               className="p-2 rounded-lg cursor-pointer transition-colors"
                               style={{ color: "var(--tg-accent)" }}
                               onMouseEnter={e => (e.currentTarget.style.background = "var(--tg-accent-tint-2)")}
                               onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                               <ExternalLink size={14} />
-                            </button>
-                            <button onClick={() => handleDelete(entry)}
-                              title="Delete"
+                            </motion.button>
+                            <motion.button onClick={() => handleDelete(entry)}
+                              title="Delete" aria-label="Delete"
+                              whileHover={reduced ? undefined : { scale: 1.08 }}
+                              whileTap={reduced ? undefined : { scale: 0.9 }}
+                              transition={{ duration: 0.18, ease: EASE_OUT }}
                               className="p-2 rounded-lg cursor-pointer transition-colors"
                               style={{ color: "var(--tg-text-3)" }}
                               onMouseEnter={e => (e.currentTarget.style.color = "var(--tg-risk-high)")}
                               onMouseLeave={e => (e.currentTarget.style.color = "var(--tg-text-3)")}>
                               <X size={14} />
-                            </button>
+                            </motion.button>
                           </div>
                         </div>
                       </motion.div>

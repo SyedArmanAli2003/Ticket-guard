@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { MessageSquare, Send, Sparkles } from "lucide-react"
 import type { Investigation } from "@/lib/types"
 import { postChat } from "@/lib/api"
-import { usePrefersReducedMotion } from "@/lib/motion"
+import { usePrefersReducedMotion, staggerContainer, chipSlideIn, EASE_OUT, SPRING_SNAPPY } from "@/lib/motion"
 
 type Msg = { role: "user" | "assistant"; content: string }
 
@@ -94,50 +94,76 @@ export default function ChatPanel({
       </p>
 
       {messages.length === 0 && (
-        <div className="flex flex-wrap gap-1.5 mb-3">
+        <motion.div
+          className="flex flex-wrap gap-1.5 mb-3"
+          variants={staggerContainer(0.06, 0.05)}
+          initial={reduced ? false : "hidden"}
+          animate="show"
+        >
           {SUGGESTED.map(s => (
-            <button key={s} onClick={() => send(s)} disabled={busy}
+            <motion.button key={s} onClick={() => send(s)} disabled={busy}
+              variants={chipSlideIn}
+              whileHover={reduced || busy ? undefined : { y: -1, background: "var(--tg-accent-tint-2)" }}
+              whileTap={reduced || busy ? undefined : { scale: 0.96 }}
+              transition={SPRING_SNAPPY}
               className="text-xs px-2.5 py-1 rounded-full cursor-pointer transition-colors disabled:opacity-50"
               style={{ background: "var(--tg-accent-tint)", color: "var(--tg-accent-soft-text)", border: "1px solid var(--tg-accent-border)" }}>
               {s}
-            </button>
+            </motion.button>
           ))}
-        </div>
+        </motion.div>
       )}
 
       <div className="space-y-2 mb-3 max-h-72 overflow-y-auto">
         <AnimatePresence initial={false}>
           {messages.map((m, i) => (
-            <motion.div key={i} initial={reduced ? false : { opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+            <motion.div key={i}
+              initial={reduced ? false : { opacity: 0, y: 8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={reduced ? { duration: 0 } : { duration: 0.32, ease: EASE_OUT }}
               className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
               <div className="text-xs leading-relaxed rounded-2xl px-3 py-2 max-w-[85%]" style={{
                 background: m.role === "user" ? "var(--tg-accent)" : "var(--tg-surface-2)",
                 color: m.role === "user" ? "var(--tg-accent-contrast)" : "var(--tg-text)",
                 border: m.role === "user" ? "none" : "1px solid var(--tg-border)",
+                borderBottomRightRadius: m.role === "user" ? 6 : undefined,
+                borderBottomLeftRadius: m.role === "assistant" ? 6 : undefined,
               }}>
                 {m.content}
               </div>
             </motion.div>
           ))}
         </AnimatePresence>
-        {busy && (
-          <div className="flex items-center gap-1.5 text-xs" style={{ color: "var(--tg-text-3)" }}>
-            <Sparkles size={12} className={reduced ? "" : "animate-pulse"} /> thinking…
-          </div>
-        )}
+        <AnimatePresence>
+          {busy && (
+            <motion.div
+              initial={reduced ? false : { opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={reduced ? undefined : { opacity: 0 }}
+              transition={{ duration: reduced ? 0 : 0.25, ease: EASE_OUT }}
+              className="flex items-center gap-1.5 text-xs" style={{ color: "var(--tg-text-3)" }}>
+              <Sparkles size={12} className={reduced ? "" : "animate-pulse"} /> thinking…
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div ref={endRef} />
       </div>
 
       <form onSubmit={e => { e.preventDefault(); send(input) }} className="flex items-center gap-2">
         <input value={input} onChange={e => setInput(e.target.value)} disabled={busy}
           placeholder="Ask about this verdict…"
-          className="flex-1 text-sm rounded-xl px-3 py-2 outline-none disabled:opacity-60"
+          className="flex-1 text-sm rounded-xl px-3 py-2 outline-none disabled:opacity-60 transition-shadow duration-200 focus:shadow-[0_0_0_3px_var(--tg-accent-tint-2)]"
+          onFocus={e => (e.currentTarget.style.borderColor = "var(--tg-accent-border)")}
+          onBlur={e => (e.currentTarget.style.borderColor = "var(--tg-border-strong)")}
           style={{ background: "var(--tg-surface-2)", color: "var(--tg-text)", border: "1px solid var(--tg-border-strong)" }} />
-        <button type="submit" disabled={busy || !input.trim()} aria-label="Send"
-          className="rounded-xl px-3 py-2 cursor-pointer disabled:opacity-40 transition-opacity inline-flex items-center justify-center"
+        <motion.button type="submit" disabled={busy || !input.trim()} aria-label="Send"
+          whileHover={reduced || busy || !input.trim() ? undefined : { y: -1, boxShadow: "0 6px 16px var(--tg-accent-tint-2)" }}
+          whileTap={reduced || busy || !input.trim() ? undefined : { scale: 0.94 }}
+          transition={SPRING_SNAPPY}
+          className="rounded-xl px-3 py-2 cursor-pointer disabled:opacity-40 disabled:cursor-default transition-opacity inline-flex items-center justify-center"
           style={{ background: "var(--tg-accent)", color: "var(--tg-accent-contrast)" }}>
           <Send size={15} strokeWidth={2.2} />
-        </button>
+        </motion.button>
       </form>
     </div>
   )

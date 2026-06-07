@@ -40,12 +40,18 @@ export default function ContributionBars({
                 style={{ background: r.color, boxShadow: `0 0 8px ${r.bg}` }}
                 initial={{ width: reduced ? target : 0 }}
                 animate={{ width: target }}
-                transition={{ duration: reduced ? 0 : 0.7, ease: EASE_OUT, delay: reduced ? 0 : i * 0.08 }}
+                transition={{ duration: reduced ? 0 : 0.75, ease: EASE_OUT, delay: reduced ? 0 : 0.1 + i * 0.09 }}
               />
             </div>
-            <span className="tabular-nums flex-shrink-0" style={{ color: r.color, fontSize: compact ? "0.6rem" : "0.65rem", width: 26, textAlign: "right" }}>
+            <motion.span
+              className="tabular-nums flex-shrink-0"
+              style={{ color: r.color, fontSize: compact ? "0.6rem" : "0.65rem", width: 26, textAlign: "right" }}
+              initial={reduced ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: reduced ? 0 : 0.5, ease: EASE_OUT, delay: reduced ? 0 : 0.32 + i * 0.09 }}
+            >
               {r.val.toFixed(2)}
-            </span>
+            </motion.span>
           </div>
         )
       })}

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import type { FeedItem, RiskLevel } from "@/lib/types"
 import { relativeTime } from "@/lib/mock"
-import { usePrefersReducedMotion, feedFlyIn } from "@/lib/motion"
+import { usePrefersReducedMotion, feedFlyIn, SPRING_SOFT, EASE_OUT } from "@/lib/motion"
 
 const DOT: Record<RiskLevel, string> = {
   HIGH: "var(--tg-risk-high)",
@@ -42,20 +42,24 @@ export default function LiveFeed({
       className="rounded-2xl p-5 scroll-mt-24"
       style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-border)", boxShadow: "var(--tg-shadow)" }}
     >
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between gap-3 mb-1">
         <div className="flex items-center gap-2">
           <span
             className={offline ? "inline-block w-2 h-2 rounded-full" : "live-dot inline-block w-2 h-2 rounded-full"}
             style={{ background: offline ? "var(--tg-text-3)" : "var(--tg-accent-bright)" }}
           />
-          <p className="text-sm font-semibold" style={{ color: "var(--tg-text)" }}>Recently reported</p>
+          <p className="text-sm font-semibold" style={{ color: "var(--tg-text)", letterSpacing: "-0.01em" }}>Recently reported</p>
         </div>
-        <span
-          className="text-xs px-2 py-0.5 rounded-full"
+        <motion.span
+          key={badge.text}
+          className="text-[0.7rem] font-medium tracking-wide px-2 py-0.5 rounded-full whitespace-nowrap"
           style={{ background: badge.bg, color: badge.color, border: `1px solid ${badge.border}` }}
+          initial={reduced ? false : { opacity: 0, scale: 0.94 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.35, ease: EASE_OUT }}
         >
           {badge.text}
-        </span>
+        </motion.span>
       </div>
       <p className="text-xs mb-4" style={{ color: "var(--tg-text-3)", lineHeight: 1.5 }}>
         {offline
@@ -79,24 +83,28 @@ export default function LiveFeed({
               initial={reduced ? false : "hidden"}
               animate="show"
               exit={reduced ? undefined : "exit"}
-              className={`rounded-xl p-3 ${item.isLive ? "fresh-ring" : ""}`}
+              whileHover={reduced ? undefined : { x: 2, transition: SPRING_SOFT }}
+              className={`rounded-xl p-3 transition-colors duration-300 ${item.isLive ? "fresh-ring" : "hover:border-[color:var(--tg-border-strong)]"}`}
               style={
                 item.isLive
                   ? { overflow: "hidden", border: "1px solid transparent" }
                   : { background: "var(--tg-surface-2)", border: "1px solid var(--tg-border)", overflow: "hidden" }
               }
             >
-              <div className="flex items-center justify-between gap-2 mb-1">
-                <span className="flex items-center gap-1.5 text-xs font-medium" style={{ color: DOT[item.riskLevel] }}>
-                  <span className="inline-block w-1.5 h-1.5 rounded-full" style={{ background: DOT[item.riskLevel] }} />
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <span className="flex items-center gap-1.5 text-xs font-semibold tracking-wide" style={{ color: DOT[item.riskLevel] }}>
+                  <span
+                    className="inline-block w-1.5 h-1.5 rounded-full"
+                    style={{ background: DOT[item.riskLevel], boxShadow: `0 0 0 3px color-mix(in srgb, ${DOT[item.riskLevel]} 18%, transparent)` }}
+                  />
                   {item.riskLevel}
                 </span>
                 <span className="text-xs tabular-nums" style={{ color: "var(--tg-text-3)" }}>
                   {item.isLive ? "just now" : relativeTime(item.reportedAt)}
                 </span>
               </div>
-              <p className="text-xs truncate" style={{ color: "var(--tg-text-2)" }}>{item.excerpt}</p>
-              <p className="text-xs mt-0.5" style={{ color: "var(--tg-text-3)" }}>{item.handle}</p>
+              <p className="text-xs truncate" style={{ color: "var(--tg-text-2)", lineHeight: 1.5 }}>{item.excerpt}</p>
+              <p className="text-[0.7rem] mt-0.5 tabular-nums" style={{ color: "var(--tg-text-3)" }}>{item.handle}</p>
             </motion.div>
           ))}
         </AnimatePresence>

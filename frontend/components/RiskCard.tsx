@@ -5,7 +5,7 @@ import { ShieldAlert, AlertTriangle, ShieldCheck, Flag, ArrowRight, CheckCircle2
 import type { Investigation, RiskLevel } from "@/lib/types"
 import ContributionBars from "@/components/ContributionBars"
 import { useCountUp } from "@/lib/useCountUp"
-import { usePrefersReducedMotion, staggerContainer, cardRise, EASE_OUT } from "@/lib/motion"
+import { usePrefersReducedMotion, staggerContainer, cardRise, fadeUpItem, EASE_OUT, SPRING_SNAPPY } from "@/lib/motion"
 
 // Verdict vocabulary stays SCAM / SUSPICIOUS / LIKELY-LEGIT (never authentic/genuine).
 const RISK_THEME: Record<
@@ -86,7 +86,7 @@ function ScoreGauge({ score, color, reduced }: { score: number; color: string; r
 }
 
 // Modal for "Find Verified Resale"
-function VerifiedResaleModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function VerifiedResaleModal({ open, onClose, reduced }: { open: boolean; onClose: () => void; reduced: boolean }) {
   if (!open) return null
   return (
     <AnimatePresence>
@@ -109,26 +109,36 @@ function VerifiedResaleModal({ open, onClose }: { open: boolean; onClose: () => 
             <p className="text-sm mb-5" style={{ color: "var(--tg-text-2)", lineHeight: 1.6 }}>
               Skip the risk. Buy from these verified platforms with buyer-protection guarantees.
             </p>
-            <div className="grid grid-cols-2 gap-3 mb-5">
+            <motion.div
+              className="grid grid-cols-2 gap-3 mb-5"
+              variants={staggerContainer(0.06, 0.08)}
+              initial={reduced ? false : "hidden"}
+              animate="show"
+            >
               {VERIFIED_PLATFORMS.map(p => (
-                <a key={p.name} href={p.url} target="_blank" rel="noopener noreferrer"
-                  className="flex flex-col gap-1 p-4 rounded-xl cursor-pointer transition-all"
-                  style={{ background: "var(--tg-surface-2)", border: "1px solid var(--tg-border-strong)" }}
-                  onMouseEnter={e => (e.currentTarget.style.borderColor = "var(--tg-accent-border)")}
-                  onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--tg-border-strong)")}>
+                <motion.a key={p.name} href={p.url} target="_blank" rel="noopener noreferrer"
+                  variants={cardRise}
+                  whileHover={reduced ? undefined : { y: -2, borderColor: "var(--tg-accent-border)" }}
+                  whileTap={reduced ? undefined : { scale: 0.98 }}
+                  transition={{ duration: 0.2, ease: EASE_OUT }}
+                  className="group flex flex-col gap-1 p-4 rounded-xl cursor-pointer transition-colors"
+                  style={{ background: "var(--tg-surface-2)", border: "1px solid var(--tg-border-strong)" }}>
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold" style={{ color: "var(--tg-text)" }}>{p.name}</span>
-                    <ExternalLink size={12} style={{ color: "var(--tg-text-3)" }} />
+                    <ExternalLink size={12} className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" style={{ color: "var(--tg-text-3)" }} />
                   </div>
                   <span className="text-xs" style={{ color: "var(--tg-risk-low)" }}>{p.description}</span>
-                </a>
+                </motion.a>
               ))}
-            </div>
-            <button onClick={onClose}
+            </motion.div>
+            <motion.button onClick={onClose}
+              whileHover={reduced ? undefined : { color: "var(--tg-text)" }}
+              whileTap={reduced ? undefined : { scale: 0.98 }}
+              transition={SPRING_SNAPPY}
               className="w-full py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-colors"
               style={{ background: "var(--tg-surface-2)", color: "var(--tg-text-2)", border: "1px solid var(--tg-border-strong)" }}>
               Close
-            </button>
+            </motion.button>
           </motion.div>
         </motion.div>
       )}
@@ -137,7 +147,7 @@ function VerifiedResaleModal({ open, onClose }: { open: boolean; onClose: () => 
 }
 
 // Modal for "Proceed, I accept the risk"
-function ProceedModal({ open, onClose, riskLevel }: { open: boolean; onClose: () => void; riskLevel: RiskLevel }) {
+function ProceedModal({ open, onClose, riskLevel, reduced }: { open: boolean; onClose: () => void; riskLevel: RiskLevel; reduced: boolean }) {
   const [checked, setChecked] = useState(false)
   if (!open) return null
   const t = RISK_THEME[riskLevel]
@@ -165,7 +175,12 @@ function ProceedModal({ open, onClose, riskLevel }: { open: boolean; onClose: ()
                 TicketGuard flagged this listing with a {riskLevel.toLowerCase()} risk level. If you still choose to proceed, please ensure you:
               </p>
             </div>
-            <ul className="space-y-2 mb-5">
+            <motion.ul
+              className="space-y-2 mb-5"
+              variants={staggerContainer(0.055, 0.1)}
+              initial={reduced ? false : "hidden"}
+              animate="show"
+            >
               {[
                 "Use a credit card (enables chargeback protection)",
                 "Never pay via Zelle, Venmo, or cryptocurrency",
@@ -173,12 +188,12 @@ function ProceedModal({ open, onClose, riskLevel }: { open: boolean; onClose: ()
                 "Verify the ticket barcode with the event organizer before paying",
                 "Meet in a public place if transferring physical tickets",
               ].map(tip => (
-                <li key={tip} className="flex items-start gap-2 text-xs" style={{ color: "var(--tg-text-2)" }}>
+                <motion.li key={tip} variants={fadeUpItem} className="flex items-start gap-2 text-xs" style={{ color: "var(--tg-text-2)" }}>
                   <CheckCircle2 size={14} className="mt-0.5 flex-shrink-0" style={{ color: "var(--tg-risk-low)" }} />
                   {tip}
-                </li>
+                </motion.li>
               ))}
-            </ul>
+            </motion.ul>
             <label className="flex items-start gap-3 cursor-pointer mb-5">
               <input type="checkbox" checked={checked} onChange={e => setChecked(e.target.checked)} className="mt-0.5" />
               <span className="text-xs" style={{ color: "var(--tg-text-2)", lineHeight: 1.6 }}>
@@ -186,16 +201,22 @@ function ProceedModal({ open, onClose, riskLevel }: { open: boolean; onClose: ()
               </span>
             </label>
             <div className="flex gap-2">
-              <button onClick={onClose}
+              <motion.button onClick={onClose}
+                whileHover={reduced ? undefined : { color: "var(--tg-text)" }}
+                whileTap={reduced ? undefined : { scale: 0.98 }}
+                transition={SPRING_SNAPPY}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-colors"
                 style={{ background: "var(--tg-surface-2)", color: "var(--tg-text-2)", border: "1px solid var(--tg-border-strong)" }}>
                 Cancel
-              </button>
-              <button disabled={!checked} onClick={onClose}
-                className="flex-1 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-all disabled:opacity-40"
+              </motion.button>
+              <motion.button disabled={!checked} onClick={onClose}
+                whileHover={reduced || !checked ? undefined : { y: -1, boxShadow: `0 6px 18px ${t.glow}` }}
+                whileTap={reduced || !checked ? undefined : { scale: 0.98 }}
+                transition={SPRING_SNAPPY}
+                className="flex-1 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-opacity disabled:opacity-40 disabled:cursor-default"
                 style={{ background: t.soft, color: t.color, border: `1px solid ${t.border}` }}>
                 I accept the risk
-              </button>
+              </motion.button>
             </div>
           </motion.div>
         </motion.div>
@@ -222,8 +243,8 @@ export default function RiskCard({
 
   return (
     <>
-      <VerifiedResaleModal open={showResale} onClose={() => setShowResale(false)} />
-      <ProceedModal open={showProceed} onClose={() => setShowProceed(false)} riskLevel={riskLevel} />
+      <VerifiedResaleModal open={showResale} onClose={() => setShowResale(false)} reduced={reduced} />
+      <ProceedModal open={showProceed} onClose={() => setShowProceed(false)} riskLevel={riskLevel} reduced={reduced} />
 
       <motion.div
         initial={reduced ? false : { opacity: 0, y: 20, scale: 0.99 }}
@@ -241,29 +262,32 @@ export default function RiskCard({
           <div className="flex items-center gap-4">
             <ScoreGauge score={riskScore} color={t.color} reduced={reduced} />
             <div>
-              <p className="text-xs uppercase tracking-[0.18em] mb-1 flex items-center gap-1.5" style={{ color: "var(--tg-text-3)" }}>
+              <p className="text-[0.7rem] uppercase tracking-[0.2em] mb-1.5" style={{ color: "var(--tg-text-3)" }}>
                 Risk verdict
               </p>
-              <p className="text-2xl font-bold font-display flex items-center gap-2" style={{ color: t.color }}>
+              <p className="text-2xl font-bold font-display flex items-center gap-2 leading-none" style={{ color: t.color }}>
                 <motion.span
-                  initial={reduced ? false : { scale: 0.6, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ delay: reduced ? 0 : 0.15, duration: 0.4, ease: EASE_OUT }}
+                  initial={reduced ? false : { scale: 0.6, opacity: 0, rotate: -8 }}
+                  animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                  transition={{ delay: reduced ? 0 : 0.15, type: "spring", stiffness: 380, damping: 18 }}
                   style={{ display: "inline-flex" }}
                 >
                   <Icon size={24} strokeWidth={2.4} />
                 </motion.span>
                 {t.verdict}
               </p>
-              <p className="text-xs mt-1" style={{ color: "var(--tg-text-3)" }}>{t.signal} detected</p>
+              <p className="text-xs mt-1.5" style={{ color: "var(--tg-text-3)" }}>{t.signal} detected</p>
             </div>
           </div>
-          <span
+          <motion.span
+            initial={reduced ? false : { opacity: 0, scale: 0.92 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: reduced ? 0 : 0.28, duration: 0.4, ease: EASE_OUT }}
             className="text-xs px-3 py-1.5 rounded-full font-semibold uppercase tracking-wider"
             style={{ background: `color-mix(in srgb, ${t.color} 12%, transparent)`, color: t.color, border: `1px solid ${t.border}` }}
           >
             {t.tag}
-          </span>
+          </motion.span>
         </div>
 
         {/* One-line rationale */}
@@ -272,7 +296,7 @@ export default function RiskCard({
         </p>
 
         {/* Evidence chips */}
-        <p className="text-xs uppercase tracking-[0.18em] mb-3" style={{ color: "var(--tg-text-3)" }}>
+        <p className="text-[0.7rem] uppercase tracking-[0.2em] mb-3" style={{ color: "var(--tg-text-3)" }}>
           Evidence
         </p>
         <motion.div
@@ -285,6 +309,8 @@ export default function RiskCard({
             <motion.div
               key={i}
               variants={cardRise}
+              whileHover={reduced ? undefined : { y: -3, borderColor: "var(--tg-border-strong)" }}
+              transition={{ duration: 0.25, ease: EASE_OUT }}
               className="rounded-xl p-4"
               style={{ background: "var(--tg-surface-2)", border: "1px solid var(--tg-border)" }}
             >
@@ -297,26 +323,40 @@ export default function RiskCard({
 
         {/* Human-in-the-loop actions — all 3 buttons now wired */}
         <div className="flex flex-wrap gap-2.5">
-          <button
+          <motion.button
             id="btn-report-listing"
             onClick={onReport}
             disabled={reported}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all duration-200 disabled:cursor-default active:scale-[0.97]"
+            whileHover={reduced || reported ? undefined : { y: -1 }}
+            whileTap={reduced || reported ? undefined : { scale: 0.97 }}
+            transition={SPRING_SNAPPY}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-colors duration-200 disabled:cursor-default"
             style={{
               background: reported ? "var(--tg-risk-low-soft)" : "var(--tg-risk-high-soft)",
               color: reported ? "var(--tg-risk-low)" : "var(--tg-risk-high)",
               border: `1px solid ${reported ? "var(--tg-risk-low-border)" : "var(--tg-risk-high-border)"}`,
             }}
           >
-            {reported ? <ShieldCheck size={15} strokeWidth={2.4} /> : <Flag size={15} strokeWidth={2.4} />}
+            <motion.span
+              key={reported ? "reported" : "report"}
+              initial={reduced ? false : { scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={SPRING_SNAPPY}
+              className="inline-flex"
+            >
+              {reported ? <ShieldCheck size={15} strokeWidth={2.4} /> : <Flag size={15} strokeWidth={2.4} />}
+            </motion.span>
             {reported ? "Reported to the corpus" : "Report listing"}
-          </button>
+          </motion.button>
 
           {/* ✅ FIXED: Find verified resale now opens a modal */}
-          <button
+          <motion.button
             id="btn-find-resale"
             onClick={() => setShowResale(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all duration-200 active:scale-[0.97]"
+            whileHover={reduced ? undefined : { y: -1, boxShadow: `0 8px 22px ${t.glow}` }}
+            whileTap={reduced ? undefined : { scale: 0.97 }}
+            transition={SPRING_SNAPPY}
+            className="group inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer"
             style={{
               background: "linear-gradient(180deg, var(--tg-accent), var(--tg-accent-2))",
               color: "var(--tg-on-accent)",
@@ -324,14 +364,17 @@ export default function RiskCard({
             }}
           >
             Find verified resale
-            <ArrowRight size={14} strokeWidth={2.4} />
-          </button>
+            <ArrowRight size={14} strokeWidth={2.4} className="transition-transform duration-200 group-hover:translate-x-0.5" />
+          </motion.button>
 
           {/* ✅ FIXED: Proceed button now opens a confirmation modal */}
-          <button
+          <motion.button
             id="btn-proceed-risk"
             onClick={() => setShowProceed(true)}
-            className="px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-all duration-200 active:scale-[0.97]"
+            whileHover={reduced ? undefined : { y: -1, borderColor: "var(--tg-border-strong)", color: "var(--tg-text)" }}
+            whileTap={reduced ? undefined : { scale: 0.97 }}
+            transition={SPRING_SNAPPY}
+            className="px-4 py-2.5 rounded-xl text-sm font-medium cursor-pointer transition-colors duration-200"
             style={{
               background: "var(--tg-surface-2)",
               color: "var(--tg-text-2)",
@@ -339,7 +382,7 @@ export default function RiskCard({
             }}
           >
             Proceed, I accept the risk
-          </button>
+          </motion.button>
         </div>
 
         <p className="text-xs mt-4" style={{ color: "var(--tg-text-3)", lineHeight: 1.5 }}>
