@@ -397,6 +397,39 @@ async def admin_users(user_id: str = Depends(get_current_user_id)):
 
 
 # --------------------------------------------------------------------------- #
+# GET /api/report/{inv_id} — public shareable investigation report (no auth)
+# --------------------------------------------------------------------------- #
+@app.get("/api/report/{inv_id}")
+async def get_public_report(inv_id: str):
+    """Return a finished investigation by ID. Publicly accessible — no auth required.
+
+    Callers with the link can view the verdict, rationale, evidence, and listing
+    summary. PII is not stored in investigation documents; the listing object
+    only carries normalised fields (price, payment method, domain, etc.).
+    """
+    doc = await asyncio.to_thread(db.get_investigation, inv_id)
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+    verdict_obj = doc.get("verdict") or {}
+    scorer_obj = doc.get("scorer") or {}
+    risk_score = scorer_obj.get("score") if scorer_obj.get("status") == "ok" else None
+    return {
+        "status": "ok",
+        "investigation_id": doc.get("_id") or inv_id,
+        "listing": doc.get("listing"),
+        "verdict": verdict_obj.get("verdict"),
+        "confidence": verdict_obj.get("confidence"),
+        "evidence": verdict_obj.get("evidence", []),
+        "rationale": verdict_obj.get("reasoning", ""),
+        "risk_score": risk_score,
+        "model_used": doc.get("model_used"),
+        "is_fallback": doc.get("is_fallback", False),
+        "engine": doc.get("engine"),
+        "created_at": str(doc.get("created_at", "")),
+    }
+
+
+# --------------------------------------------------------------------------- #
 # GET /health — minimal liveness probe (Cloud Run / load balancers)
 # --------------------------------------------------------------------------- #
 @app.get("/health")

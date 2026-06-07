@@ -61,6 +61,7 @@ export const API = {
   feed: () => `${apiBase()}/api/feed`,
   health: () => `${apiBase()}/api/health`,
   models: () => `${apiBase()}/api/models`,
+  publicReport: (id: string) => `${apiBase()}/api/report/${id}`,
   mcpInfo: () => `${apiBase()}/api/mcp/info`,
   // Auth
   register: () => `${apiBase()}/api/auth/register`,

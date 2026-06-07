@@ -1,7 +1,7 @@
 "use client"
 import { useState } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ShieldAlert, AlertTriangle, ShieldCheck, Flag, ArrowRight, CheckCircle2, ExternalLink } from "lucide-react"
+import { ShieldAlert, AlertTriangle, ShieldCheck, Flag, ArrowRight, CheckCircle2, ExternalLink, Eye } from "lucide-react"
 import type { Investigation, RiskLevel } from "@/lib/types"
 import ContributionBars from "@/components/ContributionBars"
 import { useCountUp } from "@/lib/useCountUp"
@@ -220,7 +220,8 @@ export default function RiskCard({
   reported: boolean
 }) {
   const reduced = usePrefersReducedMotion()
-  const { riskLevel, riskScore, rationale, evidence, modelUsed, isFallback } = investigation
+  const { riskLevel, riskScore, rationale, evidence, modelUsed, isFallback, queryType } = investigation
+  const isVisualForensics = queryType === "file"
   const t = RISK_THEME[riskLevel]
   const Icon = t.Icon
   const [showResale, setShowResale] = useState(false)
@@ -315,6 +316,30 @@ export default function RiskCard({
             </motion.div>
           ))}
         </motion.div>
+
+        {/* Visual Forensics badge — shown only for image/file investigations */}
+        {isVisualForensics && (
+          <motion.div
+            initial={reduced ? false : { opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: reduced ? 0 : 0.3, duration: 0.4, ease: EASE_OUT }}
+            className="mb-5 rounded-xl px-4 py-3 flex items-start gap-3"
+            style={{ background: "rgba(66,133,244,0.07)", border: "1px solid rgba(66,133,244,0.18)" }}
+          >
+            <Eye size={15} strokeWidth={2.2} style={{ color: "rgba(66,133,244,0.9)", flexShrink: 0, marginTop: 1 }} />
+            <div>
+              <p className="text-xs font-semibold mb-1" style={{ color: "rgba(66,133,244,0.9)" }}>
+                Visual Forensics · Gemini Vision
+              </p>
+              <p className="text-xs" style={{ color: "var(--tg-text-2)", lineHeight: 1.55 }}>
+                Gemini analysed the uploaded image directly. The verdict incorporates visual
+                signals: font consistency, compression artifacts around edited fields,
+                chat-based manipulation patterns (urgency language, payment refusals), and
+                Photoshop / cloning indicators detected in the file.
+              </p>
+            </div>
+          </motion.div>
+        )}
 
         {/* Human-in-the-loop actions — all 3 buttons now wired */}
         <div className="flex flex-wrap gap-2.5">

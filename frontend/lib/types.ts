@@ -60,6 +60,8 @@ export interface Investigation {
   modelUsed?: string
   /** True when a fallback model was used instead of the requested one. */
   isFallback?: boolean
+  /** Source type of the submitted input — "file" triggers the Visual Forensics badge. */
+  queryType?: "text" | "url" | "file"
 }
 
 /** An item in the "Recently reported" live feed (mock change stream). */

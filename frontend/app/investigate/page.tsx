@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback, Suspense } from "react"
 import { useSearchParams } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { Sparkles, ArrowRight, ArrowLeft, Search, Upload, Link2, FileText, AlertTriangle, X } from "lucide-react"
+import { Sparkles, ArrowRight, ArrowLeft, Search, Upload, Link2, FileText, AlertTriangle, X, Share2, Check, Eye } from "lucide-react"
 import Navbar from "@/components/Navbar"
 import InvestigationStep from "@/components/InvestigationStep"
 import RiskCard from "@/components/RiskCard"
@@ -86,6 +86,7 @@ function InvestigateContent() {
   const [reported, setReported] = useState(false)
   const [runError, setRunError] = useState<string | null>(null)
   const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash")
+  const [sharedCopied, setSharedCopied] = useState(false)
   const runId = useRef(0)
   const abortRef = useRef<AbortController | null>(null)
 
@@ -157,7 +158,7 @@ function InvestigateContent() {
       setSteps(prev => prev.map(s => s.stepNumber === n ? { ...s, status: "complete", completedAt: Date.now(), data: def.pick(inv) } : s))
     }
     if (runId.current !== id) return
-    setResult(inv); setIsRunning(false)
+    setResult({ ...inv, queryType: "text" as const }); setIsRunning(false)
     // Save history — MongoDB first, localStorage fallback
     const histEntry = {
       userId: user?.id ?? null,
@@ -216,14 +217,14 @@ function InvestigateContent() {
           realAcc.current.modelUsed = (d as { model_used?: string }).model_used
           realAcc.current.isFallback = (d as { is_fallback?: boolean }).is_fallback ?? false
         }
-        setResult(buildInvestigation(realAcc.current, recapText))
-        setIsRunning(false)
-        // Save history — MongoDB first, localStorage fallback
-        const builtInv = buildInvestigation(realAcc.current, recapText)
         const qType: "text" | "url" | "file" =
           body && (body as {type:string}).type === "url" ? "url"
           : body && ((body as {type:string}).type === "image" || (body as {type:string}).type === "pdf") ? "file"
           : "text"
+        const builtInv = { ...buildInvestigation(realAcc.current, recapText), queryType: qType }
+        setResult(builtInv)
+        setIsRunning(false)
+        // Save history — MongoDB first, localStorage fallback
         const histEntry = {
           userId: user?.id ?? null,
           query: recapText,
@@ -400,6 +401,16 @@ function InvestigateContent() {
     }
   }, [result, reported, isMock, isReal, recap])
 
+  const handleShare = useCallback(() => {
+    const invId = realAcc.current.investigationId
+    if (!invId) return
+    const url = `${window.location.origin}/report/${invId}`
+    navigator.clipboard.writeText(url).then(() => {
+      setSharedCopied(true)
+      setTimeout(() => setSharedCopied(false), 2000)
+    })
+  }, [])
+
   const completedCount = steps.filter(s => s.status === "complete" || s.status === "not_configured").length
   const geminiBlocked = isReal && health != null && health.gemini === false
   const atlasOffline = isReal && health != null && health.atlas === false
@@ -534,7 +545,7 @@ function InvestigateContent() {
                 {ingest === "file" && (
                   <motion.div variants={fadeUpItem}>
                     <label
-                      className="flex flex-col items-center justify-center gap-2 rounded-xl cursor-pointer transition-colors"
+                      className="flex flex-col items-center justify-center gap-3 rounded-xl cursor-pointer transition-colors"
                       style={{ minHeight: 150, background: "var(--tg-surface)", border: "1px dashed var(--tg-border-strong)" }}
                     >
                       <input
@@ -544,9 +555,15 @@ function InvestigateContent() {
                         onChange={e => setFile(e.target.files?.[0] || null)}
                       />
                       <Upload size={22} style={{ color: "var(--tg-accent)" }} strokeWidth={2} />
-                      <p className="text-sm" style={{ color: "var(--tg-text-2)" }}>
-                        {file ? file.name : "Click to upload a ticket PDF or screenshot"}
+                      <p className="text-sm text-center px-4" style={{ color: "var(--tg-text-2)" }}>
+                        {file ? file.name : "Upload a screenshot of the seller's DM (WhatsApp/iMessage) or an image of the physical ticket for forensic visual analysis."}
                       </p>
+                      {!file && (
+                        <span className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full"
+                          style={{ background: "rgba(66,133,244,0.1)", color: "rgba(66,133,244,0.9)", border: "1px solid rgba(66,133,244,0.2)" }}>
+                          <Eye size={11} strokeWidth={2.2} /> Gemini Vision Enabled
+                        </span>
+                      )}
                       <p className="text-xs" style={{ color: "var(--tg-text-3)" }}>PDF, PNG, JPG, WEBP</p>
                     </label>
                     {file && (
@@ -654,6 +671,26 @@ function InvestigateContent() {
                     <motion.div className="mt-5" initial={reduced ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
                       <RiskCard investigation={result} onReport={handleReport} reported={reported} />
                       <ChatPanel investigation={result} mode={mode} investigationId={isReal ? realAcc.current.investigationId : undefined} />
+                      {isReal && realAcc.current.investigationId && (
+                        <div className="mt-3 flex items-center gap-2">
+                          <button
+                            onClick={handleShare}
+                            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium cursor-pointer transition-all"
+                            style={{
+                              background: sharedCopied ? "rgba(34,197,94,0.12)" : "var(--tg-surface-2)",
+                              color: sharedCopied ? "rgb(34,197,94)" : "var(--tg-text-2)",
+                              border: `1px solid ${sharedCopied ? "rgba(34,197,94,0.3)" : "var(--tg-border-strong)"}`,
+                            }}>
+                            {sharedCopied ? <Check size={14} /> : <Share2 size={14} />}
+                            {sharedCopied ? "Link copied!" : "Share Report"}
+                          </button>
+                          {sharedCopied && (
+                            <span className="text-xs" style={{ color: "var(--tg-text-3)" }}>
+                              Anyone with this link can view the verdict.
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>

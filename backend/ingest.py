@@ -205,9 +205,15 @@ def normalize_image(image_bytes: bytes, mime: str = "image/png",
     try:
         prompt = (
             _NORMALIZER_PROMPT +
-            "(The content is an IMAGE of a ticket listing / screenshot / ticket. "
-            "OCR all visible text, read any visible barcode/QR digits into barcode_or_ref, "
-            "and infer the fields.)"
+            "(The content is an IMAGE — a ticket, digital wallet pass, or screenshot of a "
+            "DM / WhatsApp / iMessage conversation. You are a forensic image analyst. "
+            "OCR all visible text precisely. Read any visible barcode or QR code digits into "
+            "barcode_or_ref. If this is a chat screenshot, capture manipulative language, "
+            "urgency pressure, or refusal to use safe payment methods in urgency_cues. "
+            "If this is a ticket or wallet-pass image, note any visual anomalies — mismatched "
+            "fonts, blurring / JPEG artifacts around seat, row, or section numbers indicating "
+            "Photoshop editing, inconsistent spacing, cloned regions, or a generic "
+            "Ticketmaster / AXS template used fraudulently — also in urgency_cues as red flags.)"
         )
         resp = client.models.generate_content(
             model=model or config.GEMINI_MODEL,
@@ -293,10 +299,17 @@ def _image_tamper_hints(client: genai.Client, image_bytes: bytes, mime: str) -> 
         resp = client.models.generate_content(
             model=config.GEMINI_MODEL,
             contents=[types.Part.from_bytes(data=image_bytes, mime_type=mime),
-                      "Inspect this ticket/screenshot image for signs of digital tampering "
-                      "(mismatched fonts, misaligned text, edited seat/price fields, "
-                      "compression artifacts around text, cloned regions). Reply with one "
-                      "short sentence of findings, or 'none' if it looks clean."],
+                      "You are a forensic image analyst looking for ticket scams. "
+                      "If this is a screenshot of a DM or WhatsApp / iMessage chat, look for "
+                      "manipulative language, urgency cues, or refusal to use safe payment "
+                      "methods. "
+                      "If this is a picture of a ticket or a digital wallet pass, look for "
+                      "visual anomalies: mismatched fonts, blurring or JPEG compression "
+                      "artifacts around the section / row / seat numbers that may indicate "
+                      "Photoshop editing, inconsistent character spacing, cloned or copy-pasted "
+                      "regions, or a generic Ticketmaster / AXS template used fraudulently. "
+                      "List each specific red flag you observe as a short bullet. "
+                      "Reply 'none' if the image appears authentic."],
             config=types.GenerateContentConfig(temperature=0.0),
         )
         txt = (resp.text or "").strip()

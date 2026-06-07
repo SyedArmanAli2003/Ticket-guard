@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
   Shield, AlertTriangle, CheckCircle2, Clock, History, Search,
-  ExternalLink, Trash2, X, RefreshCw, Loader2, WifiOff,
+  ExternalLink, Trash2, X, RefreshCw, Loader2, WifiOff, Share2, Check,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/components/AuthProvider"
@@ -67,6 +67,7 @@ export default function HistoryPage() {
   const [dbMode, setDbMode] = useState<"mongo" | "local" | "none">("none")
   const [search, setSearch] = useState("")
   const [filter, setFilter] = useState<"ALL" | "HIGH" | "MEDIUM" | "LOW">("ALL")
+  const [copiedId, setCopiedId] = useState<string | null>(null)
 
   const fetchHistory = useCallback(async () => {
     setLoading(true)
@@ -140,6 +141,15 @@ export default function HistoryPage() {
     }
     clearUserHistory(user.id)
   }, [user, dbMode])
+
+  const handleShareReport = useCallback((entry: HistoryEntry) => {
+    if (!entry.investigationId) return
+    const url = `${window.location.origin}/report/${entry.investigationId}`
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedId(entry.id)
+      setTimeout(() => setCopiedId(null), 2000)
+    })
+  }, [])
 
   const filtered = entries.filter(e => {
     if (filter !== "ALL" && e.verdict !== filter) return false
@@ -365,6 +375,20 @@ export default function HistoryPage() {
                               onMouseLeave={e => (e.currentTarget.style.background = "transparent")}>
                               <ExternalLink size={14} />
                             </button>
+                            {entry.investigationId && (
+                              <button
+                                onClick={() => handleShareReport(entry)}
+                                title={copiedId === entry.id ? "Copied!" : "Share report"}
+                                className="p-2 rounded-lg cursor-pointer transition-colors"
+                                style={{
+                                  color: copiedId === entry.id ? "rgb(34,197,94)" : "var(--tg-text-2)",
+                                  background: copiedId === entry.id ? "rgba(34,197,94,0.08)" : "transparent",
+                                }}
+                                onMouseEnter={e => { if (copiedId !== entry.id) e.currentTarget.style.color = "var(--tg-text)" }}
+                                onMouseLeave={e => { if (copiedId !== entry.id) e.currentTarget.style.color = "var(--tg-text-2)" }}>
+                                {copiedId === entry.id ? <Check size={14} /> : <Share2 size={14} />}
+                              </button>
+                            )}
                             <button onClick={() => handleDelete(entry)}
                               title="Delete"
                               className="p-2 rounded-lg cursor-pointer transition-colors"
