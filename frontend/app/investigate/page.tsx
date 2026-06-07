@@ -309,8 +309,16 @@ function InvestigateContent() {
     if (isMock) { await runMock(text); return }
     if (!isReal) return
     if (ingest === "text") {
-      if (!text.trim()) return
-      await runReal({ type: "text", text: text.trim(), model: selectedModel }, text.trim())
+      const t = text.trim()
+      if (!t) return
+      // Guard: don't run a confident verdict on non-listing input (e.g. "hi").
+      const wordCount = t.split(/\s+/).filter(Boolean).length
+      if (t.length < 15 || wordCount < 3) {
+        setRunError("That's not enough to investigate. Paste the actual resale listing or seller message — ideally with the price, event, seller handle or payment method.")
+        return
+      }
+      setRunError(null)
+      await runReal({ type: "text", text: t, model: selectedModel }, t)
     } else if (ingest === "url") {
       if (!url.trim()) return
       await runReal({ type: "url", url: url.trim(), model: selectedModel }, url.trim())
@@ -610,6 +618,12 @@ function InvestigateContent() {
                 >
                   {isRunning ? "Investigating…" : (<><Search size={16} strokeWidth={2.4} /> Investigate this listing <ArrowRight size={15} strokeWidth={2.4} /></>)}
                 </motion.button>
+
+                {runError && !submitted && (
+                  <p className="text-xs mt-3 px-3 py-2.5 rounded-lg" style={{ background: "var(--tg-warn-tint)", color: "var(--tg-warn)", border: "1px solid var(--tg-warn-border)" }}>
+                    {runError}
+                  </p>
+                )}
 
                 {/* quick example pills (text only) */}
                 {ingest === "text" && (

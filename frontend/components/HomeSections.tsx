@@ -17,7 +17,12 @@ import {
   cardRise,
   fadeUpItem,
   EASE_OUT,
+  SPRING_SOFT,
 } from "@/lib/motion"
+
+// Shared hover/press feel for elevated cards — a restrained lift, never bouncy.
+const HOVER_LIFT = { y: -4, transition: SPRING_SOFT }
+const PRESS = { scale: 0.985 }
 
 const STEPS = [
   {
@@ -107,7 +112,7 @@ export default function HomeSections() {
           initial={reduced ? false : { opacity: 0, y: 14 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={VIEWPORT}
-          transition={{ duration: 0.55, ease: EASE_OUT }}
+          transition={{ duration: 0.55, ease: EASE_OUT, delay: 0.08 }}
         >
           A five-step agent investigation
         </motion.h2>
@@ -126,19 +131,32 @@ export default function HomeSections() {
               const Icon = node.Icon
               return (
                 <div key={node.label} className="contents">
-                  <motion.div variants={cardRise} className="flex md:flex-col items-center gap-3 md:gap-2 md:flex-shrink-0">
-                    <div
+                  <motion.div
+                    variants={cardRise}
+                    className="group flex md:flex-col items-center gap-3 md:gap-2 md:flex-shrink-0"
+                    whileHover={reduced ? undefined : "hover"}
+                  >
+                    <motion.div
                       className="flex items-center justify-center rounded-xl"
                       style={{
                         width: 52,
                         height: 52,
                         background: "var(--tg-surface-2)",
                         border: `1px solid color-mix(in srgb, ${node.color} 33%, transparent)`,
-                        boxShadow: `0 0 18px color-mix(in srgb, ${node.color} 13%, transparent)`,
                       }}
+                      initial={false}
+                      variants={{
+                        hover: {
+                          y: -3,
+                          boxShadow: `0 0 26px color-mix(in srgb, ${node.color} 26%, transparent)`,
+                          borderColor: `color-mix(in srgb, ${node.color} 55%, transparent)`,
+                        },
+                      }}
+                      animate={{ boxShadow: `0 0 18px color-mix(in srgb, ${node.color} 13%, transparent)` }}
+                      transition={SPRING_SOFT}
                     >
                       <Icon size={22} style={{ color: node.color }} strokeWidth={2} />
-                    </div>
+                    </motion.div>
                     <div className="md:text-center">
                       <p className="text-sm font-semibold" style={{ color: "var(--tg-text)" }}>{node.label}</p>
                       <p className="text-xs" style={{ color: "var(--tg-text-3)" }}>{node.sub}</p>
@@ -167,32 +185,50 @@ export default function HomeSections() {
             <motion.div
               key={s.n}
               variants={cardRise}
-              className="rounded-2xl p-6"
+              whileHover={reduced ? undefined : HOVER_LIFT}
+              whileTap={reduced ? undefined : PRESS}
+              className="rounded-2xl p-6 transition-colors duration-300 hover:border-[color:var(--tg-border-strong)]"
               style={{ background: "var(--tg-surface)", border: "1px solid var(--tg-border)", boxShadow: "var(--tg-shadow)" }}
             >
               <div className="flex items-center justify-between mb-4">
-                <span className="text-2xl font-bold font-display" style={{ color: "var(--tg-text-faint)" }}>{s.n}</span>
+                <span className="text-2xl font-bold font-display tabular-nums" style={{ color: "var(--tg-text-faint)" }}>{s.n}</span>
                 <span
-                  className="text-xs px-2 py-0.5 rounded-full"
+                  className="text-[0.7rem] font-medium tracking-wide px-2 py-0.5 rounded-full"
                   style={{ background: s.badgeBg, color: s.badgeColor, border: `1px solid ${s.badgeBorder}` }}
                 >
                   {s.badge}
                 </span>
               </div>
-              <p className="font-semibold mb-2" style={{ color: "var(--tg-text)" }}>{s.title}</p>
-              <p className="text-sm" style={{ color: "var(--tg-text-2)", lineHeight: 1.6 }}>{s.body}</p>
+              <p className="font-semibold mb-2" style={{ color: "var(--tg-text)", letterSpacing: "-0.01em" }}>{s.title}</p>
+              <p className="text-sm" style={{ color: "var(--tg-text-2)", lineHeight: 1.65 }}>{s.body}</p>
             </motion.div>
           ))}
         </motion.div>
         <div className="mt-8">
-          <button
+          <motion.button
             onClick={() => router.push("/investigate")}
-            className="inline-flex items-center gap-1.5 px-6 py-3 rounded-xl font-semibold text-sm cursor-pointer transition-transform duration-200 active:scale-[0.97]"
+            className="inline-flex items-center gap-1.5 px-6 py-3 rounded-xl font-semibold text-sm cursor-pointer"
             style={{ background: "linear-gradient(180deg, var(--tg-accent), var(--tg-accent-2))", color: "var(--tg-on-accent)", boxShadow: "0 8px 24px var(--tg-accent-glow)" }}
+            initial={false}
+            variants={{
+              rest: { y: 0, boxShadow: "0 8px 24px var(--tg-accent-glow)" },
+              hover: { y: -2, boxShadow: "0 12px 30px var(--tg-accent-glow)" },
+            }}
+            animate="rest"
+            whileHover={reduced ? undefined : "hover"}
+            whileTap={reduced ? undefined : { scale: 0.97 }}
+            transition={SPRING_SOFT}
           >
             Try it on a listing
-            <ArrowRight size={15} strokeWidth={2.4} />
-          </button>
+            {/* Arrow nudges on button hover — the "hover" label propagates from the button. */}
+            <motion.span
+              className="inline-flex"
+              variants={{ rest: { x: 0 }, hover: { x: 3 } }}
+              transition={SPRING_SOFT}
+            >
+              <ArrowRight size={15} strokeWidth={2.4} />
+            </motion.span>
+          </motion.button>
         </div>
       </section>
 
@@ -228,7 +264,8 @@ export default function HomeSections() {
             {/* One-line embed snippet */}
             <motion.div
               variants={fadeUpItem}
-              className="rounded-xl p-5"
+              whileHover={reduced ? undefined : { y: -3, transition: SPRING_SOFT }}
+              className="rounded-xl p-5 transition-colors duration-300 hover:border-[color:var(--tg-border-strong)]"
               style={{ background: "var(--tg-surface-2)", border: "1px solid var(--tg-border)" }}
             >
               <p className="text-xs font-semibold mb-3 flex items-center gap-1.5" style={{ color: "var(--tg-text)" }}>
@@ -255,7 +292,8 @@ export default function HomeSections() {
             {/* MCP tool */}
             <motion.div
               variants={fadeUpItem}
-              className="rounded-xl p-5"
+              whileHover={reduced ? undefined : { y: -3, transition: SPRING_SOFT }}
+              className="rounded-xl p-5 transition-colors duration-300 hover:border-[color:var(--tg-border-strong)]"
               style={{ background: "var(--tg-surface-2)", border: "1px solid var(--tg-border)" }}
             >
               <p className="text-xs font-semibold mb-3 flex items-center gap-1.5" style={{ color: "var(--tg-text)" }}>
@@ -314,18 +352,19 @@ export default function HomeSections() {
           >
             {[
               { v: `${Math.round(EVAL.recall * 100)}%`, l: "seeded-scam recall" },
-              { v: EVAL.corpusSize.toLocaleString(), l: "corpus listings" },
+              { v: EVAL.corpusSize.toLocaleString("en-US"), l: "corpus listings" },
               { v: EVAL.patternsTracked, l: "scam patterns tracked" },
               { v: `${(EVAL.medianLatencyMs / 1000).toFixed(1)}s`, l: "median investigation" },
             ].map(m => (
               <motion.div
                 key={m.l}
                 variants={cardRise}
-                className="rounded-xl p-4 text-center"
+                whileHover={reduced ? undefined : { y: -3, transition: SPRING_SOFT }}
+                className="rounded-xl p-4 text-center transition-colors duration-300 hover:border-[color:var(--tg-border-strong)]"
                 style={{ background: "var(--tg-surface-2)", border: "1px solid var(--tg-border)" }}
               >
-                <p className="font-bold text-xl font-display" style={{ color: "var(--tg-text)" }}>{m.v}</p>
-                <p className="text-xs mt-1" style={{ color: "var(--tg-text-3)" }}>{m.l}</p>
+                <p className="font-bold text-xl font-display tabular-nums" style={{ color: "var(--tg-text)" }}>{m.v}</p>
+                <p className="text-xs mt-1" style={{ color: "var(--tg-text-3)", lineHeight: 1.4 }}>{m.l}</p>
               </motion.div>
             ))}
           </motion.div>

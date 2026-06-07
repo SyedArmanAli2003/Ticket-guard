@@ -47,8 +47,14 @@ export const staggerContainer = (stagger = 0.05, delayChildren = 0): Variants =>
  * NO filter:blur — that forces per-frame GPU compositing and kills perf.
  * Pure opacity + translateY runs at 60fps on the compositor thread.
  */
+// NOTE: `hidden` keeps opacity:1 on purpose. framer-motion drives entrances via
+// requestAnimationFrame, which the browser PAUSES for backgrounded/hidden tabs.
+// If `hidden` were opacity:0, content would stay invisible until rAF resumed —
+// blanking the page for anyone whose tab isn't focused at load. Keeping opacity:1
+// makes the entrance a pure slide (transform), so content is ALWAYS visible and
+// merely glides into place when the animation runs. Visibility never depends on JS.
 export const fadeUpItem: Variants = {
-  hidden: { opacity: 0, y: 14 },
+  hidden: { opacity: 1, y: 14 },
   show: {
     opacity: 1,
     y: 0,
@@ -58,7 +64,7 @@ export const fadeUpItem: Variants = {
 
 /** Per-word headline reveal — no blur. */
 export const wordReveal: Variants = {
-  hidden: { opacity: 0, y: "0.4em" },
+  hidden: { opacity: 1, y: "0.4em" },
   show: {
     opacity: 1,
     y: "0em",
@@ -68,19 +74,19 @@ export const wordReveal: Variants = {
 
 /** Tool-call chip sliding in from the left. */
 export const chipSlideIn: Variants = {
-  hidden: { opacity: 0, x: -6 },
+  hidden: { opacity: 1, x: -6 },
   show: { opacity: 1, x: 0, transition: { duration: 0.3, ease: EASE_OUT } },
 }
 
 /** Card lifting into view (used for steps + sections). */
 export const cardRise: Variants = {
-  hidden: { opacity: 0, y: 16 },
+  hidden: { opacity: 1, y: 16 },
   show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: EASE_OUT } },
 }
 
 /** Live-feed item flying in from the top with a soft settle. */
 export const feedFlyIn: Variants = {
-  hidden: { opacity: 0, y: -10, scale: 0.98 },
+  hidden: { opacity: 1, y: -10, scale: 0.98 },
   show: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.35, ease: EASE_OUT } },
   exit: { opacity: 0, height: 0, marginTop: 0, transition: { duration: 0.25, ease: EASE_OUT } },
 }

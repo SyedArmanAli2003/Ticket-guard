@@ -101,11 +101,27 @@
   --tg-code-bg: hsl(240, 18%, 5%);
   --tg-code-border: rgba(255, 255, 255, 0.06);
 
-  /* animated-background tuning (used by .bg-* layers) */
-  --tg-grid-line: rgba(255, 255, 255, 0.04);
-  --tg-aurora-opacity: 1;
-  --tg-grain-opacity: 0.045;
-  --tg-vignette: linear-gradient(to bottom, transparent 55%, hsl(240, 28%, 3.5%) 100%);
+  /* ── "Deep Field" backdrop tuning (used by .tg-field__* layers) ─────────────
+     DARK = deep + rich: a near-black canvas lifted toward a faintly warm centre,
+     one restrained emerald bloom, whisper-faint contour + dot detail. */
+  --tg-field-wash:
+    radial-gradient(120% 90% at 50% -8%, rgba(20, 38, 34, 0.55), transparent 55%),
+    radial-gradient(100% 120% at 50% 120%, rgba(18, 16, 32, 0.50), transparent 60%),
+    linear-gradient(180deg, hsl(220, 26%, 5.5%) 0%, hsl(240, 28%, 3.5%) 55%, hsl(245, 30%, 3%) 100%);
+  --tg-bloom: radial-gradient(circle at 50% 50%,
+    rgba(16, 185, 129, 0.16) 0%, rgba(13, 148, 136, 0.09) 32%, transparent 68%);
+  --tg-bloom-2: radial-gradient(circle at 50% 50%,
+    rgba(99, 102, 241, 0.11) 0%, rgba(45, 212, 191, 0.05) 40%, transparent 70%);
+  --tg-bloom-opacity: 0.9;
+  --tg-bloom-hero-opacity: 1;
+  --tg-contour-line: rgba(125, 211, 252, 0.05);
+  --tg-contour-opacity: 0.8;
+  --tg-dot-color: rgba(255, 255, 255, 0.05);
+  --tg-dot-opacity: 1;
+  --tg-grain-opacity: 0.05;
+  --tg-vignette:
+    radial-gradient(130% 100% at 50% 32%, transparent 52%, rgba(4, 5, 10, 0.55) 100%);
+
   --tg-track: rgba(255, 255, 255, 0.08);     /* gauge / progress tracks */
   --tg-track-2: rgba(255, 255, 255, 0.07);
 }
@@ -184,10 +200,27 @@
   --tg-code-bg: #0F172A;                        /* keep code blocks dark for contrast */
   --tg-code-border: rgba(15, 23, 42, 0.10);
 
-  --tg-grid-line: rgba(15, 23, 42, 0.045);
-  --tg-aurora-opacity: 0.55;
-  --tg-grain-opacity: 0.025;
-  --tg-vignette: linear-gradient(to bottom, transparent 60%, rgba(241, 243, 245, 0.9) 100%);
+  /* ── "Deep Field" backdrop tuning — LIGHT ───────────────────────────────────
+     Airy + soft (never grey mush): a clean off-white canvas with a faint cool
+     sky at the top and the lightest emerald wash, so it reads as crafted, not
+     flat. Detail layers are dialled right down so the page stays bright. */
+  --tg-field-wash:
+    radial-gradient(120% 90% at 50% -6%, rgba(204, 251, 241, 0.55), transparent 56%),
+    radial-gradient(100% 120% at 85% 8%, rgba(224, 231, 255, 0.50), transparent 52%),
+    linear-gradient(180deg, #FBFCFE 0%, #F6F7F9 60%, #F1F3F6 100%);
+  --tg-bloom: radial-gradient(circle at 50% 50%,
+    rgba(13, 148, 136, 0.12) 0%, rgba(16, 185, 129, 0.06) 34%, transparent 68%);
+  --tg-bloom-2: radial-gradient(circle at 50% 50%,
+    rgba(124, 58, 237, 0.07) 0%, rgba(8, 145, 178, 0.04) 42%, transparent 70%);
+  --tg-bloom-opacity: 0.85;
+  --tg-bloom-hero-opacity: 1;
+  --tg-contour-line: rgba(13, 148, 136, 0.07);
+  --tg-contour-opacity: 0.7;
+  --tg-dot-color: rgba(15, 23, 42, 0.05);
+  --tg-dot-opacity: 0.9;
+  --tg-grain-opacity: 0.018;
+  --tg-vignette:
+    radial-gradient(130% 100% at 50% 30%, transparent 58%, rgba(214, 220, 228, 0.45) 100%);
   --tg-track: rgba(15, 23, 42, 0.10);
   --tg-track-2: rgba(15, 23, 42, 0.08);
 }
@@ -260,6 +293,24 @@ h1, h2, h3, .font-display { font-family: var(--font-display), ui-sans-serif, sys
 .animate-fade-up { opacity: 0; animation: fadeUp 0.6s cubic-bezier(0.16,1,0.3,1) forwards; }
 .animate-spin-slow { animation: spinSlow 5s linear infinite; }
 
+/* Route entrance (app/template.tsx). The `to` frame has NO transform so the
+   wrapper rests at `transform: none` — critical so it never creates a containing
+   block that would trap the page's fixed deep-field backdrop. */
+@keyframes routeEnter {
+  /* opacity is intentionally NOT animated. This class wraps the ENTIRE page, and
+     with animation-fill-mode:both an opacity:0 "from" frame pins the whole page
+     invisible/dim whenever the animation is paused or hasn't completed
+     (backgrounded load, throttled tab, slow device). Page visibility must NEVER
+     depend on an animation finishing — so we animate transform only; the wrapper
+     is always opacity:1. */
+  from { transform: translateY(8px); }
+  to   { transform: none; }   /* MUST be `none`, not translateY(0): a matrix() at rest
+                                 creates a containing block that traps position:fixed
+                                 children (modals centered in page, not viewport →
+                                 "sign-in appears below"). `none` = no trap. */
+}
+.route-enter { animation: routeEnter 0.42s cubic-bezier(0.16,1,0.3,1) both; }
+
 .step-content { max-height: 0; overflow: hidden; transition: max-height 0.5s cubic-bezier(0.16,1,0.3,1); }
 .step-content.open { max-height: 900px; }
 
@@ -331,76 +382,106 @@ h1, h2, h3, .font-display { font-family: var(--font-display), ui-sans-serif, sys
   will-change: transform;
 }
 
-/* ── Premium animated background (gradient mesh + grid + grain) ───────────── */
-@keyframes auroraA {
-  0%,100% { transform: translate3d(-6%,-3%,0) scale(1);    }
-  50%     { transform: translate3d(8%,6%,0)   scale(1.25); }
-}
-@keyframes auroraB {
-  0%,100% { transform: translate3d(5%,4%,0)   scale(1.15); }
-  50%     { transform: translate3d(-7%,-6%,0) scale(0.95); }
-}
-@keyframes auroraC {
-  0%,100% { transform: translate3d(0,5%,0)    scale(1);    }
-  50%     { transform: translate3d(4%,-5%,0)  scale(1.2);  }
-}
-/* extra mesh blob for richness */
-@keyframes auroraD {
-  0%,100% { transform: translate3d(3%,-4%,0)  scale(1.05); }
-  50%     { transform: translate3d(-5%,7%,0)  scale(1.28); }
+/* ════════════════════════════════════════════════════════════════════════════
+   "DEEP FIELD" BACKDROP
+   A calm, layered, hand-crafted composition (NOT a mesh-blob aurora). Every
+   layer is fixed, z-0, non-interactive, and theme-driven via the --tg-field-*
+   tokens. Motion is transform/opacity only and very slow; all of it is killed
+   under prefers-reduced-motion (see the media query below).
+   ════════════════════════════════════════════════════════════════════════════ */
+.tg-field {
+  /* z-index MUST be negative: the backdrop is portaled into <body> AFTER the page
+     content, so at z-index:0 it painted ON TOP and blanked the whole site. -1 puts
+     it behind normal-flow content (still above the html/body canvas bg). */
+  position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
+  contain: strict;
 }
 
-.bg-aurora { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; opacity: var(--tg-aurora-opacity); }
-.bg-aurora .blob { position: absolute; border-radius: 50%; opacity: 0.20; will-change: transform; contain: strict; }
-.bg-aurora .b1 { width: 50vw; height: 50vw; left: -10vw;  top: -12vw;
-  background: radial-gradient(circle at 30% 30%, #7c3aed, transparent 70%); animation: auroraA 38s ease-in-out infinite; }
-.bg-aurora .b2 { width: 46vw; height: 46vw; right: -8vw; top: 4vh;
-  background: radial-gradient(circle at 50% 50%, #4f46e5, transparent 70%); animation: auroraB 46s ease-in-out infinite; }
-.bg-aurora .b3 { width: 40vw; height: 40vw; left: 26vw;  bottom: -18vw;
-  background: radial-gradient(circle at 50% 50%, #06b6d4, transparent 70%); opacity: 0.24; animation: auroraC 52s ease-in-out infinite; }
-.bg-aurora .b4 { width: 32vw; height: 32vw; right: 10vw; bottom: 0vh;
-  background: radial-gradient(circle at 50% 50%, #2dd4bf, transparent 70%); opacity: 0.16; animation: auroraD 58s ease-in-out infinite; }
+/* 1 — base depth wash (static; the "lit-from-within" canvas) */
+.tg-field__wash { position: absolute; inset: 0; background: var(--tg-field-wash); }
 
-/* Emerald "trust" aurora — used on TicketGuard surfaces alongside the violet */
-.bg-aurora.teal .b1 { background: radial-gradient(circle at 30% 30%, #10b981, transparent 70%); opacity: 0.42; }
-.bg-aurora.teal .b2 { background: radial-gradient(circle at 50% 50%, #6d28d9, transparent 70%); opacity: 0.40; }
-.bg-aurora.teal .b3 { background: radial-gradient(circle at 50% 50%, #0d9488, transparent 70%); opacity: 0.30; }
-.bg-aurora.teal .b4 { background: radial-gradient(circle at 50% 50%, #22d3ee, transparent 70%); opacity: 0.20; }
-
-/* Light theme: keep the mesh colourful but dial blobs so they read as soft tints
-   on the off-white canvas rather than muddy washes. */
-.light .bg-aurora .blob { opacity: 0.35; }
-.light .bg-aurora .b1 { background: radial-gradient(circle at 30% 30%, #a78bfa, transparent 70%); }
-.light .bg-aurora .b2 { background: radial-gradient(circle at 50% 50%, #818cf8, transparent 70%); }
-.light .bg-aurora .b3 { background: radial-gradient(circle at 50% 50%, #67e8f9, transparent 70%); opacity: 0.28; }
-.light .bg-aurora.teal .b1 { background: radial-gradient(circle at 30% 30%, #5eead4, transparent 70%); opacity: 0.5; }
-.light .bg-aurora.teal .b2 { background: radial-gradient(circle at 50% 50%, #c4b5fd, transparent 70%); opacity: 0.45; }
-.light .bg-aurora.teal .b3 { background: radial-gradient(circle at 50% 50%, #5eead4, transparent 70%); opacity: 0.3; }
-.light .bg-aurora.teal .b4 { background: radial-gradient(circle at 50% 50%, #67e8f9, transparent 70%); opacity: 0.22; }
-
-/* Fine technical grid, faded toward edges. Slowly drifts diagonally. */
-@keyframes gridDrift {
-  from { background-position: 0 0, 0 0; }
-  to   { background-position: 64px 64px, 64px 64px; }
+/* 2 — single restrained brand bloom. One soft emerald glow, anchored high and
+   slightly left, drifting almost imperceptibly. `is-hero` lifts + centres it. */
+@keyframes tgBloomDrift {
+  0%   { transform: translate3d(-3%, -2%, 0) scale(1);    }
+  50%  { transform: translate3d(3%,  2%, 0)  scale(1.08); }
+  100% { transform: translate3d(-3%, -2%, 0) scale(1);    }
 }
-.bg-grid { position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  background-image:
-    linear-gradient(var(--tg-grid-line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--tg-grid-line) 1px, transparent 1px);
-  background-size: 64px 64px, 64px 64px;
-  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 35%, #000 30%, transparent 78%);
-          mask-image: radial-gradient(ellipse 80% 60% at 50% 35%, #000 30%, transparent 78%);
-  animation: gridDrift 26s linear infinite;
+.tg-field__bloom {
+  position: absolute;
+  top: -22%; left: 50%;
+  width: min(1100px, 130vw); height: min(1100px, 130vw);
+  margin-left: calc(min(1100px, 130vw) / -2);
+  background: var(--tg-bloom);
+  opacity: var(--tg-bloom-opacity);
+  will-change: transform;
+  animation: tgBloomDrift 34s ease-in-out infinite;
+}
+.tg-field__bloom.is-hero {
+  top: -10%;
+  opacity: var(--tg-bloom-hero-opacity);
+}
+
+/* a cooler, smaller counter-bloom low-right — gives the field real depth without
+   becoming a second "blob" (it's slow, faint, and offset). */
+@keyframes tgBloomDrift2 {
+  0%   { transform: translate3d(2%, 2%, 0)   scale(1.05); }
+  50%  { transform: translate3d(-3%, -3%, 0) scale(0.95); }
+  100% { transform: translate3d(2%, 2%, 0)   scale(1.05); }
+}
+.tg-field__bloom-2 {
+  position: absolute;
+  bottom: -26%; right: -14%;
+  width: min(820px, 90vw); height: min(820px, 90vw);
+  background: var(--tg-bloom-2);
+  opacity: var(--tg-bloom-opacity);
+  will-change: transform;
+  animation: tgBloomDrift2 46s ease-in-out infinite;
+}
+
+/* 3 — topographic contour signature. Faint, organic, map-like lines that drift
+   with a slow parallax. This is the distinctive, hand-designed element. */
+@keyframes tgContourDrift {
+  0%   { transform: translate3d(0, 0, 0)        scale(1.06); }
+  50%  { transform: translate3d(-1.6%, -1%, 0)  scale(1.10); }
+  100% { transform: translate3d(0, 0, 0)        scale(1.06); }
+}
+.tg-field__contours {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: var(--tg-contour-opacity);
+  -webkit-mask-image: radial-gradient(125% 95% at 50% 32%, #000 38%, transparent 82%);
+          mask-image: radial-gradient(125% 95% at 50% 32%, #000 38%, transparent 82%);
+}
+.tg-field__contours-inner {
+  transform-origin: 50% 40%;
+  will-change: transform;
+  animation: tgContourDrift 40s ease-in-out infinite;
+}
+
+/* 4 — dotted constellation field (premium "engineered" texture, radially faded).
+   A fine dot grid — far softer + more crafted than the old graph-paper grid. */
+@keyframes tgDotsDrift {
+  from { background-position: 0 0; }
+  to   { background-position: 26px 26px; }
+}
+.tg-field__dots {
+  position: absolute; inset: 0;
+  background-image: radial-gradient(var(--tg-dot-color) 1px, transparent 1.4px);
+  background-size: 26px 26px;
+  opacity: var(--tg-dot-opacity);
+  -webkit-mask-image: radial-gradient(110% 80% at 50% 28%, #000 22%, transparent 72%);
+          mask-image: radial-gradient(110% 80% at 50% 28%, #000 22%, transparent 72%);
+  animation: tgDotsDrift 90s linear infinite;
   will-change: background-position;
 }
-/* Subtle film grain for a premium, non-flat finish */
-.bg-grain { position: fixed; inset: 0; z-index: 0; pointer-events: none; opacity: var(--tg-grain-opacity); mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
-/* Top + bottom vignette for depth */
-.bg-vignette { position: fixed; inset: 0; z-index: 0; pointer-events: none;
-  background:
-    radial-gradient(120% 80% at 50% -10%, var(--tg-accent-tint), transparent 60%),
-    var(--tg-vignette); }
+
+/* 5a — fine film grain (static; non-flat, expensive finish) */
+.tg-field__grain {
+  position: absolute; inset: 0; opacity: var(--tg-grain-opacity); mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+/* 5b — soft focus vignette (draws the eye toward the centre) */
+.tg-field__vignette { position: absolute; inset: 0; background: var(--tg-vignette); }
 
 /* ── Reduced motion: fully disable heavy / continuous animation ──────────── */
 @media (prefers-reduced-motion: reduce) {
@@ -411,11 +492,83 @@ h1, h2, h3, .font-display { font-family: var(--font-display), ui-sans-serif, sys
     scroll-behavior: auto !important;
   }
   html { scroll-behavior: auto !important; }
-  .bg-aurora .blob,
-  .bg-grid { animation: none !important; }
+  /* Deep-field backdrop: freeze all drift, keep the composition resting + crisp. */
+  .tg-field__bloom,
+  .tg-field__bloom-2,
+  .tg-field__contours-inner,
+  .tg-field__dots { animation: none !important; transform: none !important; }
   .scan-shimmer::after { animation: none !important; opacity: 0; }
   .skeleton-shimmer::after { animation: none !important; opacity: 0; }
   .glow-breathe { animation: none !important; opacity: 0.75; transform: none; }
   .live-dot { animation: none !important; }
   .animate-fade-up { opacity: 1; animation: none !important; }
+  .route-enter { animation: none !important; opacity: 1; transform: none !important; }
 }
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Hero ShieldMark animations — MOVED here from an inline <style> in
+   ShieldMark.tsx. A raw <style>{`...`}</style> rendered inside JSX caused a
+   React "Text content did not match" HYDRATION mismatch, which made React throw
+   away the server HTML and re-render the whole root on the client — and that
+   tree-replacement froze every framer-motion entrance animation on the page
+   (hero + sections rendered invisible). Keyframes belong in the stylesheet.
+   ════════════════════════════════════════════════════════════════════════════ */
+@keyframes tgSweepMove {
+  0%   { transform: translateY(0); opacity: 0; }
+  14%  { opacity: 1; }
+  86%  { opacity: 1; }
+  100% { transform: translateY(150px); opacity: 0; }
+}
+.tg-sweep { animation: tgSweepMove 3.6s cubic-bezier(0.16,1,0.3,1) infinite; will-change: transform; }
+
+@keyframes tgGlowPulse {
+  0%,100% { opacity: 0.72; transform: scale(1); }
+  50%     { opacity: 1;    transform: scale(1.07); }
+}
+.tg-glow { animation: tgGlowPulse 4.6s ease-in-out infinite; will-change: opacity, transform; }
+
+@keyframes tgBodyPulse {
+  0%,100% { transform: scale(1); }
+  50%     { transform: scale(1.02); }
+}
+.tg-body { animation: tgBodyPulse 4.6s ease-in-out infinite; will-change: transform; }
+
+@keyframes tgRingPulse {
+  0%   { opacity: 0.45; transform: translate(-50%,-50%) scale(0.7); }
+  60%  { opacity: 0;    transform: translate(-50%,-50%) scale(1.12); }
+  100% { opacity: 0;    transform: translate(-50%,-50%) scale(1.12); }
+}
+.tg-ring {
+  position: absolute; top: 50%; left: 50%; width: 100%; height: 100%;
+  border-radius: 50%;
+  border: 1px solid rgba(16,185,129,0.45);
+  transform: translate(-50%,-50%) scale(0.7);
+  animation: tgRingPulse 3.6s cubic-bezier(0.16,1,0.3,1) infinite;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tg-sweep { animation: none; opacity: 0; }
+  .tg-glow  { animation: none; opacity: 0.8; transform: none; }
+  .tg-body  { animation: none; transform: none; }
+  .tg-ring  { animation: none; opacity: 0; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════════
+   Accessibility — visible keyboard focus ring on EVERY interactive element.
+   Mouse clicks don't trigger :focus-visible, so this only appears for keyboard
+   (Tab) navigation — no visual change for mouse users, full a11y for keyboard.
+   ════════════════════════════════════════════════════════════════════════════ */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--tg-accent);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+/* Kill the default ring only when NOT keyboard-focusing (mouse/touch). */
+:focus:not(:focus-visible) { outline: none; }
