@@ -253,7 +253,9 @@ export default function RiskCard({
       <ProceedModal open={showProceed} onClose={() => setShowProceed(false)} riskLevel={riskLevel} reduced={reduced} />
 
       <motion.div
-        initial={reduced ? false : { opacity: 0, y: 20, scale: 0.99 }}
+        role="region"
+        aria-label="Investigation risk verdict"
+        initial={reduced ? false : { opacity: 1, y: 20, scale: 0.99 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: reduced ? 0 : 0.6, ease: EASE_OUT }}
         className="rounded-2xl p-6 mb-4"
@@ -263,6 +265,10 @@ export default function RiskCard({
           boxShadow: `var(--tg-shadow), 0 0 36px ${t.glow}`,
         }}
       >
+        {/* Screen-reader verdict announcement (the score gauge is aria-hidden) */}
+        <p className="sr-only" role="status" aria-live="polite">
+          Risk verdict: {t.verdict}. Risk score {riskScore} out of 100. {t.signal} detected.
+        </p>
         {/* Verdict header */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="flex items-center gap-4">
@@ -273,7 +279,7 @@ export default function RiskCard({
               </p>
               <p className="text-2xl font-bold font-display flex items-center gap-2 leading-none" style={{ color: t.color }}>
                 <motion.span
-                  initial={reduced ? false : { scale: 0.6, opacity: 0, rotate: -8 }}
+                  initial={reduced ? false : { scale: 0.6, opacity: 1, rotate: -8 }}
                   animate={{ scale: 1, opacity: 1, rotate: 0 }}
                   transition={{ delay: reduced ? 0 : 0.15, type: "spring", stiffness: 380, damping: 18 }}
                   style={{ display: "inline-flex" }}
@@ -287,7 +293,7 @@ export default function RiskCard({
           </div>
           <div className="flex flex-col items-end gap-2">
             <motion.span
-              initial={reduced ? false : { opacity: 0, scale: 0.92 }}
+              initial={reduced ? false : { opacity: 1, scale: 0.92 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: reduced ? 0 : 0.28, duration: 0.4, ease: EASE_OUT }}
               className="text-xs px-3 py-1.5 rounded-full font-semibold uppercase tracking-wider"

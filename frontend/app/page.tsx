@@ -9,9 +9,11 @@ export default function HomePage() {
   return (
     <div style={{ backgroundColor: "var(--tg-bg)", minHeight: "100dvh" }}>
       <Navbar />
-      <HeroSection />
-      <HomeSections />
-      <ChannelsSection />
+      <main id="main-content" tabIndex={-1} style={{ outline: "none" }}>
+        <HeroSection />
+        <HomeSections />
+        <ChannelsSection />
+      </main>
       <Footer />
     </div>
   )
