@@ -96,51 +96,6 @@ export default function ShieldMark() {
           style={{ filter: "drop-shadow(0 0 6px rgba(52,211,153,0.55))" }}
         />
       </svg>
-
-      <style>{`
-        @keyframes tgSweepMove {
-          0%   { transform: translateY(0); opacity: 0; }
-          14%  { opacity: 1; }
-          86%  { opacity: 1; }
-          100% { transform: translateY(150px); opacity: 0; }
-        }
-        /* Premium decelerate easing (matches the app's EASE_OUT) for an organic glide. */
-        .tg-sweep { animation: tgSweepMove 3.6s cubic-bezier(0.16,1,0.3,1) infinite; will-change: transform; }
-
-        @keyframes tgGlowPulse {
-          0%,100% { opacity: 0.72; transform: scale(1); }
-          50%     { opacity: 1;    transform: scale(1.07); }
-        }
-        .tg-glow { animation: tgGlowPulse 4.6s ease-in-out infinite; will-change: opacity, transform; }
-
-        @keyframes tgBodyPulse {
-          0%,100% { transform: scale(1); }
-          50%     { transform: scale(1.02); }
-        }
-        /* Body breathes on the same period as the glow so the mark feels like one object. */
-        .tg-body { animation: tgBodyPulse 4.6s ease-in-out infinite; will-change: transform; }
-
-        @keyframes tgRingPulse {
-          0%   { opacity: 0.45; transform: translate(-50%,-50%) scale(0.7); }
-          60%  { opacity: 0;    transform: translate(-50%,-50%) scale(1.12); }
-          100% { opacity: 0;    transform: translate(-50%,-50%) scale(1.12); }
-        }
-        .tg-ring {
-          position: absolute; top: 50%; left: 50%; width: 100%; height: 100%;
-          border-radius: 50%;
-          border: 1px solid rgba(16,185,129,0.45);
-          transform: translate(-50%,-50%) scale(0.7);
-          animation: tgRingPulse 3.6s cubic-bezier(0.16,1,0.3,1) infinite;
-          pointer-events: none;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .tg-sweep { animation: none; opacity: 0; }
-          .tg-glow  { animation: none; opacity: 0.8; transform: none; }
-          .tg-body  { animation: none; transform: none; }
-          .tg-ring  { animation: none; opacity: 0; }
-        }
-      `}</style>
     </div>
   )
 }

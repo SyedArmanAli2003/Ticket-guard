@@ -31,8 +31,10 @@ export default function HeroSection() {
   const reduced = usePrefersReducedMotion()
   const recallPct = Math.round(EVAL.recall * 100)
 
-  // When reduced, jump straight to the resting state (no transforms run).
-  const animateState = reduced ? "show" : "show"
+  // Entrance plays "hidden" → "show"; reduced-motion users jump straight to the
+  // resting state. (The hydration mismatch that used to freeze every entrance —
+  // an inline <style> in ShieldMark — is fixed, so this runs reliably now.)
+  const animateState = "show"
   const initialState = reduced ? "show" : "hidden"
 
   return (
@@ -73,7 +75,7 @@ export default function HeroSection() {
           className="font-display font-bold tracking-[-0.038em] mb-5 text-balance"
           style={{ fontSize: "clamp(2.15rem,5vw,3.7rem)", lineHeight: 1.05 }}
         >
-          <motion.span variants={staggerContainer(0.06, 0.14)} style={{ display: "inline" }}>
+          <motion.span variants={staggerContainer(0.06, 0.14)} initial={initialState} animate={animateState} style={{ display: "inline" }}>
             {LEAD_WORDS.map((w, i) => (
               <span key={`l-${i}`} style={{ display: "inline-block", overflow: "hidden", verticalAlign: "top" }}>
                 <motion.span
