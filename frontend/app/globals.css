@@ -304,7 +304,10 @@ h1, h2, h3, .font-display { font-family: var(--font-display), ui-sans-serif, sys
      depend on an animation finishing — so we animate transform only; the wrapper
      is always opacity:1. */
   from { transform: translateY(8px); }
-  to   { transform: translateY(0); }
+  to   { transform: none; }   /* MUST be `none`, not translateY(0): a matrix() at rest
+                                 creates a containing block that traps position:fixed
+                                 children (modals centered in page, not viewport →
+                                 "sign-in appears below"). `none` = no trap. */
 }
 .route-enter { animation: routeEnter 0.42s cubic-bezier(0.16,1,0.3,1) both; }
 

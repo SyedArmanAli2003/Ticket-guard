@@ -1,5 +1,6 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { motion, AnimatePresence } from "framer-motion"
 import { Shield, Eye, EyeOff, X, Loader2 } from "lucide-react"
 import { useAuth } from "@/components/AuthProvider"
@@ -21,6 +22,10 @@ export default function AuthModal({ open, onClose, defaultTab = "login" }: AuthM
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  // Portal to <body> so the fixed overlay is ALWAYS viewport-centered, never
+  // trapped by a transformed ancestor (which made it appear far down the page).
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   const reset = () => { setName(""); setEmail(""); setPassword(""); setError(null); setShowPw(false) }
 
@@ -43,7 +48,8 @@ export default function AuthModal({ open, onClose, defaultTab = "login" }: AuthM
 
   const switchTab = (t: "login" | "register") => { setTab(t); setError(null) }
 
-  return (
+  if (!mounted) return null
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -196,6 +202,7 @@ export default function AuthModal({ open, onClose, defaultTab = "login" }: AuthM
           </motion.div>
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }
