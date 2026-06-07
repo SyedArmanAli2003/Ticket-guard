@@ -308,8 +308,16 @@ function InvestigateContent() {
     if (isMock) { await runMock(text); return }
     if (!isReal) return
     if (ingest === "text") {
-      if (!text.trim()) return
-      await runReal({ type: "text", text: text.trim(), model: selectedModel }, text.trim())
+      const t = text.trim()
+      if (!t) return
+      // Guard: don't run a confident verdict on non-listing input (e.g. "hi").
+      const wordCount = t.split(/\s+/).filter(Boolean).length
+      if (t.length < 15 || wordCount < 3) {
+        setRunError("That's not enough to investigate. Paste the actual resale listing or seller message — ideally with the price, event, seller handle or payment method.")
+        return
+      }
+      setRunError(null)
+      await runReal({ type: "text", text: t, model: selectedModel }, t)
     } else if (ingest === "url") {
       if (!url.trim()) return
       await runReal({ type: "url", url: url.trim(), model: selectedModel }, url.trim())
