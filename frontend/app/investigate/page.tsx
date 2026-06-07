@@ -9,6 +9,7 @@ import RiskCard from "@/components/RiskCard"
 import LiveFeed from "@/components/LiveFeed"
 import HealthStrip from "@/components/HealthStrip"
 import Footer from "@/components/Footer"
+import ModelSelector from "@/components/ModelSelector"
 import { useAuth } from "@/components/AuthProvider"
 import { addHistoryEntry } from "@/lib/history"
 import { getAuth } from "@/lib/auth"
@@ -83,6 +84,7 @@ function InvestigateContent() {
   const [feed, setFeed] = useState<FeedItem[]>([])
   const [reported, setReported] = useState(false)
   const [runError, setRunError] = useState<string | null>(null)
+  const [selectedModel, setSelectedModel] = useState("gemini-2.5-flash")
   const runId = useRef(0)
   const abortRef = useRef<AbortController | null>(null)
 
@@ -142,7 +144,7 @@ function InvestigateContent() {
       setIngest("text")
       setText(q)
       if (isMock) runMock(q)
-      else runReal({ type: "text", text: q }, q)
+      else runReal({ type: "text", text: q, model: selectedModel }, q)
     }
   }, [searchParams, isMock, isReal, text, runMock, runReal]) // removed submitted dependency to allow re-runs
 
@@ -222,6 +224,8 @@ function InvestigateContent() {
           realAcc.current.riskScore = (d as { risk_score?: number | null }).risk_score ?? realAcc.current.riskScore
           realAcc.current.investigationId = (d as { investigation_id?: string }).investigation_id
           realAcc.current.engine = (d as { engine?: string }).engine
+          realAcc.current.modelUsed = (d as { model_used?: string }).model_used
+          realAcc.current.isFallback = (d as { is_fallback?: boolean }).is_fallback ?? false
         }
         setResult(buildInvestigation(realAcc.current, recapText))
         setIsRunning(false)
@@ -316,16 +320,16 @@ function InvestigateContent() {
     if (!isReal) return
     if (ingest === "text") {
       if (!text.trim()) return
-      await runReal({ type: "text", text: text.trim() }, text.trim())
+      await runReal({ type: "text", text: text.trim(), model: selectedModel }, text.trim())
     } else if (ingest === "url") {
       if (!url.trim()) return
-      await runReal({ type: "url", url: url.trim() }, url.trim())
+      await runReal({ type: "url", url: url.trim(), model: selectedModel }, url.trim())
     } else if (ingest === "file") {
       if (!file) return
       const dataUri = await fileToDataUri(file)
       const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
       await runReal(
-        { type: isPdf ? "pdf" : "image", file_b64: dataUri, filename: file.name, content_type: file.type || (isPdf ? "application/pdf" : "image/png") },
+        { type: isPdf ? "pdf" : "image", file_b64: dataUri, filename: file.name, content_type: file.type || (isPdf ? "application/pdf" : "image/png"), model: selectedModel },
         file.name
       )
     }
@@ -344,7 +348,7 @@ function InvestigateContent() {
         return () => clearTimeout(t)
       }
       if (isReal) {
-        const t = setTimeout(() => runReal({ type: "text", text: sample.text }, sample.text), 700)
+        const t = setTimeout(() => runReal({ type: "text", text: sample.text, model: selectedModel }, sample.text), 700)
         return () => clearTimeout(t)
       }
     }
@@ -552,7 +556,7 @@ function InvestigateContent() {
                   </motion.div>
                 )}
 
-                <motion.div variants={fadeUpItem} className="flex justify-between items-center mt-2 mb-6 flex-wrap gap-2">
+                <motion.div variants={fadeUpItem} className="flex justify-between items-center mt-2 mb-3 flex-wrap gap-2">
                   {ingest === "text" ? (
                     <button onClick={fillExample} className="inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg cursor-pointer transition-colors"
                       style={{ background: "var(--tg-surface-2)", color: "var(--tg-text-2)", border: "1px solid var(--tg-border-strong)" }}
@@ -563,6 +567,20 @@ function InvestigateContent() {
                   ) : <span />}
                   {ingest === "text" && <p className="text-xs" style={{ color: "var(--tg-text-3)" }}>{text.length} / 2000 · ⌘/Ctrl + Enter</p>}
                 </motion.div>
+
+                {/* Model selector + fallback hint */}
+                {isReal && (
+                  <motion.div variants={fadeUpItem} className="flex items-center justify-between mb-5 flex-wrap gap-2">
+                    <ModelSelector
+                      selectedModel={selectedModel}
+                      onModelChange={setSelectedModel}
+                      disabled={isRunning}
+                    />
+                    <p className="text-xs" style={{ color: "rgba(255,255,255,0.2)" }}>
+                      Auto-fallback: Flash → Lite → Pro
+                    </p>
+                  </motion.div>
+                )}
 
                 <motion.button
                   variants={fadeUpItem}

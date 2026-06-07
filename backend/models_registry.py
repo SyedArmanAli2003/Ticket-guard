@@ -36,6 +36,9 @@ class ModelConfig:
     provider: str          # always "google" — Gemini-only by design
     max_tokens: int
     description: str
+    speed: str             # "fastest" | "fast" | "powerful"
+    context_window: str    # human-readable, e.g. "1M tokens"
+    best_for: str          # short use-case label for the UI picker
 
 
 # All Gemini, all via google-genai. Kept to the 2.5 family per config.py's note
@@ -47,15 +50,21 @@ MODELS: dict[str, ModelConfig] = {
         tier=ModelTier.PRIMARY,
         provider="google",
         max_tokens=8192,
-        description="Primary — Google Gemini, fast balanced reasoning (hackathon core model).",
+        description="Default — best speed/accuracy balance",
+        speed="fastest",
+        context_window="1M tokens",
+        best_for="Most investigations",
     ),
     "gemini-2.5-flash-lite": ModelConfig(
         id="gemini-2.5-flash-lite",
-        display_name="Gemini 2.5 Flash-Lite",
+        display_name="Gemini 2.5 Flash Lite",
         tier=ModelTier.FALLBACK1,
         provider="google",
         max_tokens=8192,
-        description="Fallback 1 — cheapest/fastest Gemini; separate quota bucket for resilience.",
+        description="Lighter — activates on quota fallback",
+        speed="fast",
+        context_window="1M tokens",
+        best_for="High-volume / quota saving",
     ),
     "gemini-2.5-pro": ModelConfig(
         id="gemini-2.5-pro",
@@ -63,7 +72,10 @@ MODELS: dict[str, ModelConfig] = {
         tier=ModelTier.FALLBACK2,
         provider="google",
         max_tokens=8192,
-        description="Fallback 2 — highest-quality Gemini reasoning (lower free quota).",
+        description="Most powerful — slower, deepest reasoning",
+        speed="powerful",
+        context_window="2M tokens",
+        best_for="Complex PDFs, ambiguous cases",
     ),
 }
 
@@ -117,6 +129,9 @@ def get_all_models() -> list[dict]:
             "provider": m.provider,
             "max_tokens": m.max_tokens,
             "description": m.description,
+            "speed": m.speed,
+            "context_window": m.context_window,
+            "best_for": m.best_for,
             "is_primary": m.tier == ModelTier.PRIMARY,
             "available": gemini_ok,
         }
