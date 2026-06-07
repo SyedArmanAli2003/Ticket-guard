@@ -60,6 +60,7 @@ export const API = {
   chat: () => `${apiBase()}/api/chat`,
   feed: () => `${apiBase()}/api/feed`,
   health: () => `${apiBase()}/api/health`,
+  models: () => `${apiBase()}/api/models`,
   mcpInfo: () => `${apiBase()}/api/mcp/info`,
   // Auth
   register: () => `${apiBase()}/api/auth/register`,

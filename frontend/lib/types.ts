@@ -56,6 +56,10 @@ export interface Investigation {
   rule: RuleCheck
   rationale: string
   evidence: EvidenceChip[]
+  /** Gemini model that produced the verdict (real mode only). */
+  modelUsed?: string
+  /** True when a fallback model was used instead of the requested one. */
+  isFallback?: boolean
 }
 
 /** An item in the "Recently reported" live feed (mock change stream). */
@@ -156,6 +160,8 @@ export interface FinalizeFrame {
     investigation_id?: string
     risk_score?: number | null
     engine?: string
+    model_used?: string
+    is_fallback?: boolean
   }
   error?: string
 }
@@ -212,13 +218,14 @@ export interface RealReport {
 
 /** The request body for POST /api/investigate. */
 export type InvestigateRequestBody =
-  | { type: "text"; text: string }
-  | { type: "url"; url: string }
+  | { type: "text"; text: string; model?: string }
+  | { type: "url"; url: string; model?: string }
   | {
       type: "pdf" | "image"
       file_b64: string
       filename: string
       content_type: string
+      model?: string
     }
 
 export interface BusinessPlan {

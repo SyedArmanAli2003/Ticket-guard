@@ -225,6 +225,12 @@ function ProceedModal({ open, onClose, riskLevel, reduced }: { open: boolean; on
   )
 }
 
+const MODEL_DISPLAY: Record<string, string> = {
+  "gemini-2.5-flash": "Gemini 2.5 Flash",
+  "gemini-2.5-flash-lite": "Gemini 2.5 Flash Lite",
+  "gemini-2.5-pro": "Gemini 2.5 Pro",
+}
+
 export default function RiskCard({
   investigation,
   onReport,
@@ -235,7 +241,7 @@ export default function RiskCard({
   reported: boolean
 }) {
   const reduced = usePrefersReducedMotion()
-  const { riskLevel, riskScore, rationale, evidence } = investigation
+  const { riskLevel, riskScore, rationale, evidence, modelUsed, isFallback } = investigation
   const t = RISK_THEME[riskLevel]
   const Icon = t.Icon
   const [showResale, setShowResale] = useState(false)
@@ -279,15 +285,30 @@ export default function RiskCard({
               <p className="text-xs mt-1.5" style={{ color: "var(--tg-text-3)" }}>{t.signal} detected</p>
             </div>
           </div>
-          <motion.span
-            initial={reduced ? false : { opacity: 0, scale: 0.92 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: reduced ? 0 : 0.28, duration: 0.4, ease: EASE_OUT }}
-            className="text-xs px-3 py-1.5 rounded-full font-semibold uppercase tracking-wider"
-            style={{ background: `color-mix(in srgb, ${t.color} 12%, transparent)`, color: t.color, border: `1px solid ${t.border}` }}
-          >
-            {t.tag}
-          </motion.span>
+          <div className="flex flex-col items-end gap-2">
+            <motion.span
+              initial={reduced ? false : { opacity: 0, scale: 0.92 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: reduced ? 0 : 0.28, duration: 0.4, ease: EASE_OUT }}
+              className="text-xs px-3 py-1.5 rounded-full font-semibold uppercase tracking-wider"
+              style={{ background: `color-mix(in srgb, ${t.color} 12%, transparent)`, color: t.color, border: `1px solid ${t.border}` }}
+            >
+              {t.tag}
+            </motion.span>
+            {modelUsed && (
+              <span
+                className="text-xs px-2 py-0.5 rounded-full"
+                style={{
+                  background: isFallback ? "rgba(234,179,8,0.1)" : "rgba(66,133,244,0.1)",
+                  color: isFallback ? "rgb(250,204,21)" : "rgba(66,133,244,0.9)",
+                  border: `1px solid ${isFallback ? "rgba(234,179,8,0.2)" : "rgba(66,133,244,0.2)"}`,
+                }}
+              >
+                {isFallback ? "↩ Fallback: " : "✦ "}
+                {MODEL_DISPLAY[modelUsed] ?? modelUsed}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* One-line rationale */}

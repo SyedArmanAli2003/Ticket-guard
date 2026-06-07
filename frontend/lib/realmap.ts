@@ -153,6 +153,8 @@ export interface RealResult {
   confidence: number
   investigationId?: string
   engine?: string
+  modelUsed?: string
+  isFallback?: boolean
 }
 
 export function buildInvestigation(r: RealResult, inputText: string): Investigation {
@@ -191,6 +193,8 @@ export function buildInvestigation(r: RealResult, inputText: string): Investigat
     rule: { passed: level === "LOW", note: "" }, // rule detail lives in step 6
     rationale,
     evidence,
+    modelUsed: r.modelUsed,
+    isFallback: r.isFallback,
   }
 }
 
