@@ -326,6 +326,28 @@ function Navbar() {
                   Check a listing
                   <ArrowRight size={14} strokeWidth={2.4} className="transition-transform duration-200 ease-out group-hover:translate-x-0.5" />
                 </motion.button>
+
+                {/* Auth (mobile) — was missing entirely */}
+                {!user ? (
+                  <button onClick={() => { setOpen(false); setAuthOpen(true) }}
+                    className="mt-2 inline-flex items-center justify-center gap-1.5 text-sm font-medium px-6 py-3 rounded-xl cursor-pointer"
+                    style={{ background: "var(--tg-surface-2)", color: "var(--tg-text)", border: "1px solid var(--tg-border-strong)" }}>
+                    <User size={14} /> Sign in
+                  </button>
+                ) : (
+                  <>
+                    <button onClick={() => { setOpen(false); go("/history") }}
+                      className="mt-2 inline-flex items-center justify-center gap-1.5 text-sm font-medium px-6 py-3 rounded-xl cursor-pointer"
+                      style={{ background: "var(--tg-surface-2)", color: "var(--tg-text)", border: "1px solid var(--tg-border-strong)" }}>
+                      <History size={14} /> My History
+                    </button>
+                    <button onClick={() => { setOpen(false); logout() }}
+                      className="mt-2 inline-flex items-center justify-center gap-1.5 text-sm font-medium px-6 py-3 rounded-xl cursor-pointer"
+                      style={{ background: "var(--tg-risk-high-soft)", color: "var(--tg-risk-high)", border: "1px solid var(--tg-risk-high-border)" }}>
+                      <LogOut size={14} /> Sign out
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>

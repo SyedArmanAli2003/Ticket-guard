@@ -47,7 +47,7 @@ export default function AuthModal({ open, onClose, defaultTab = "login" }: AuthM
     <AnimatePresence>
       {open && (
         <motion.div
-          initial={{ opacity: 0 }}
+          initial={{ opacity: 1 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2, ease: EASE_OUT }}
@@ -56,7 +56,7 @@ export default function AuthModal({ open, onClose, defaultTab = "login" }: AuthM
           onClick={e => { if (e.target === e.currentTarget) onClose() }}
         >
           <motion.div
-            initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.97, y: 14 }}
+            initial={reduced ? { opacity: 1 } : { opacity: 1, scale: 0.97, y: 14 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.98, y: 8 }}
             transition={reduced ? { duration: 0.18 } : { duration: 0.32, ease: EASE_OUT }}
