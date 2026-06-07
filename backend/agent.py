@@ -82,6 +82,19 @@ NORMALIZER_INSTRUCTION = (
     "No prose, no markdown fences."
 )
 
+def report_scammer_to_moderators(seller_handle: str, reason: str) -> str:
+    """Take action! Call this tool to autonomously file a moderation report against a confirmed scammer.
+    Args:
+        seller_handle: The username or email of the scammer.
+        reason: A short 1-sentence reason for the ban.
+    """
+    if not seller_handle or seller_handle.lower() == "unknown":
+        return "Action skipped: No seller handle available to report."
+    
+    # In a real app, this hits a Discord Webhook or SendGrid API
+    print(f"\n🚨 [AGENT ACTION TAKEN] 🚨 -> Filed Trust & Safety report against {seller_handle}. Reason: {reason}\n")
+    return f"Successfully filed Trust & Safety report against {seller_handle}. Action ID: TS-9824."
+
 VERDICT_INSTRUCTION = """You are TicketGuard's Verdict Writer — the final agent in an 8-step ticket-resale
 scam-risk investigation pipeline.
 
@@ -102,6 +115,7 @@ RULES (never break these):
    confidence, and do not guess ("insufficient evidence" is a valid stance).
 4. Ground every evidence bullet in a specific signal that was actually found.
 5. The verdict label MUST be EXACTLY one of: SCAM | SUSPICIOUS | LIKELY-LEGIT.
+6. TAKE ACTION: If your verdict is SCAM and you have a seller_handle, you MUST call the `report_scammer_to_moderators` tool to file a ban report BEFORE returning your JSON.
 
 VERDICT QUALITY GUIDANCE (risk signals to weigh, when present in the evidence):
 - Irreversible-payment-only (Zelle / CashApp / Venmo friends-and-family / crypto /
@@ -136,7 +150,7 @@ def build_agents() -> tuple[LlmAgent, LlmAgent, McpToolset | None]:
         model=config.GEMINI_MODEL,
         name="verdict_writer",
         instruction=VERDICT_INSTRUCTION,
-        tools=[],
+        tools=[report_scammer_to_moderators],
     )
     return normalizer, verdict_writer, mcp
 
@@ -152,7 +166,7 @@ def build_verdict_agent(model_id: str | None = None) -> LlmAgent:
         model=model_id or config.GEMINI_MODEL,
         name="verdict_writer",
         instruction=VERDICT_INSTRUCTION,
-        tools=[],
+        tools=[report_scammer_to_moderators],
     )
 
 
@@ -208,8 +222,7 @@ def official_transfer_rules(listing: dict) -> dict:
         signals.append({"signal": "urgency_pressure", "weight": 12,
                         "detail": f"{len(urgency)} urgency cue(s): {', '.join(map(str, urgency[:3]))}"})
 
-    violates = any(s["signal"].startswith("non_official_transfer")
-                   or s["signal"].startswith("irreversible_payment") for s in signals)
+    violates = any(s["signal"].startswith("non_official_transfer") for s in signals)
     return {
         "violates_official_transfer": violates,
         "signals": signals,
