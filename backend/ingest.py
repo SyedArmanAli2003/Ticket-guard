@@ -76,6 +76,16 @@ def _gc() -> genai.Client | None:
         return None
 
 
+def reset_client() -> None:
+    """Discard the cached genai.Client so the next call to _gc() creates a fresh one.
+
+    Call this immediately after config.rotate_api_key() returns True so that
+    ingest normalisation picks up the new GOOGLE_API_KEY.
+    """
+    global _genai_client
+    _genai_client = None
+
+
 # --------------------------------------------------------------------------- #
 # JSON parsing (Gemini may wrap in fences)
 # --------------------------------------------------------------------------- #

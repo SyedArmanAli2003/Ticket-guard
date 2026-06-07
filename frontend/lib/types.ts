@@ -126,6 +126,7 @@ export interface HealthResponse {
   gemini: boolean
   atlas: boolean
   mcp: boolean
+  arize?: boolean
   gmail: boolean
   cluster_version: string | null
   rankfusion_capable: boolean

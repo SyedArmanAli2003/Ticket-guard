@@ -18,3 +18,18 @@ pillow>=11.2.1
 # Optional native barcode/QR decode; ingest.py degrades gracefully if absent
 # (falls back to Gemini reading visible digits). Pinned to a version with wheels.
 zxing-cpp>=2.2.1
+
+# ── Observability — Arize Phoenix (OpenTelemetry) ───────────────────────────
+# Traces every Gemini generate_content/embed call (auto) + each of the 8
+# investigation steps + the Atlas hybrid-search span. Gracefully no-ops when
+# PHOENIX_API_KEY is unset (observability.py guards init), so this is additive
+# and never required to run TicketGuard.
+arize-phoenix-otel>=0.7.0
+openinference-instrumentation-google-genai>=0.1.0
+opentelemetry-sdk>=1.24.0
+opentelemetry-exporter-otlp-proto-http>=1.24.0
+
+# ── Rate limiting ────────────────────────────────────────────────────────────
+# Per-IP request throttling on the two heavy inference endpoints.
+# In-memory by default (single-instance Render deploy). No Redis needed.
+slowapi>=0.1.0

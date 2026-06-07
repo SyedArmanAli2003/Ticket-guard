@@ -25,9 +25,13 @@ from contextlib import asynccontextmanager
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")  # Windows console emoji safety
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 import chat
 import config
@@ -35,6 +39,11 @@ import db
 import pipeline
 import models_registry as registry
 from models import InvestigateRequest, ReportRequest, ChatRequest
+from observability import init_phoenix
+
+# Per-IP rate limiter — in-memory, no Redis required.
+# Keyed by real client IP even behind Render's proxy (X-Forwarded-For respected).
+limiter = Limiter(key_func=get_remote_address)
 
 # SSE headers: disable proxy buffering so events flush immediately.
 _SSE_HEADERS = {
@@ -46,6 +55,7 @@ _SSE_HEADERS = {
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    init_phoenix()   # Arize Phoenix tracing (no-op if PHOENIX_API_KEY unset)
     db.init_db()
     pipeline.init_runner()
     # Seed demo accounts into MongoDB (idempotent — skips if email already exists)
@@ -62,6 +72,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="TicketGuard Agent API", lifespan=lifespan)
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 _origins = [o for o in os.getenv("CORS_ORIGINS", "").split(",") if o] or ["*"]
 app.add_middleware(
     CORSMiddleware,
@@ -69,6 +82,27 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ── Global JSON error handlers ───────────────────────────────────────────────
+# Ensure FastAPI never returns HTML on validation or server errors.
+@app.exception_handler(RequestValidationError)
+async def _validation_error_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={"status": "error", "detail": "Invalid request body",
+                 "errors": exc.errors()[:5]},
+    )
+
+
+@app.exception_handler(Exception)
+async def _unhandled_error_handler(request: Request, exc: Exception):
+    if isinstance(exc, (HTTPException, RateLimitExceeded)):
+        raise exc  # let FastAPI / slowapi handle these normally
+    return JSONResponse(
+        status_code=500,
+        content={"status": "error", "detail": "Internal server error"},
+    )
 
 
 def _sse(event: dict) -> str:
@@ -80,7 +114,8 @@ def _sse(event: dict) -> str:
 # POST /api/investigate — streamed multi-step investigation (SSE)
 # --------------------------------------------------------------------------- #
 @app.post("/api/investigate")
-async def investigate(req: InvestigateRequest):
+@limiter.limit("10/minute")
+async def investigate(request: Request, req: InvestigateRequest):
     """Run the full investigation, streaming each step as SSE.
 
     Event shapes (all `data: <json>\\n\\n`):
@@ -122,7 +157,8 @@ def _safe_reason(reason) -> str:
 # POST /api/check — synchronous JSON verdict (for embedding widgets / API)
 # --------------------------------------------------------------------------- #
 @app.post("/api/check")
-async def check(req: InvestigateRequest):
+@limiter.limit("20/minute")
+async def check(request: Request, req: InvestigateRequest):
     """Run the pipeline to completion and return a single verdict bundle.
 
     Response (200):
@@ -134,8 +170,36 @@ async def check(req: InvestigateRequest):
     """
     result = await pipeline.investigate_sync(req.to_source(), req.model)
     if isinstance(result, dict) and result.get("status") not in ("ok", None):
-        result["reason"] = _safe_reason(result.get("reason"))
+        reason = _safe_reason(result.get("reason"))
+        result["reason"] = reason
+        status_code = 503
+        if "capacity" in reason or "busy" in reason:
+            status_code = 429
+        elif result.get("status") == "error":
+            status_code = 500
+        # Instead of just returning 200, return a specific status code but keep the JSON shape
+        # Or raise an HTTPException. The frontend expects JSON with 'status' field.
+        # Returning JSONResponse allows us to control the status code.
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=status_code, content=result)
     return result
+
+@app.get("/")
+def read_root():
+    """Root handler to prevent 404s when hitting the raw backend URL."""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse(url="/docs")
+
+
+# --------------------------------------------------------------------------- #
+# GET /api/ping — ultra-lightweight keep-warm probe
+# Hit this every ~10 min from UptimeRobot / cron-job.org to prevent Render's
+# free-tier 15-min spin-down (the 45–74s cold-start kills demo reliability).
+# No DB or Gemini I/O — returns in <5ms.
+# --------------------------------------------------------------------------- #
+@app.get("/api/ping")
+async def ping():
+    return {"status": "ok", "service": "TicketGuard"}
 
 
 # --------------------------------------------------------------------------- #
@@ -240,6 +304,7 @@ async def health_full():
         "gemini": config.gemini_configured(),
         "atlas": atlas_ok,
         "mcp": pipeline.mcp_enabled(),
+        "arize": bool(os.getenv("PHOENIX_API_KEY")),  # Arize Phoenix tracing enabled
         "gmail": False,  # DEFERRED: Gmail OAuth ingestion not built (see ingest TODO).
         # Atlas detail.
         "cluster_version": st.get("cluster_version"),
@@ -299,6 +364,37 @@ async def mcp_info():
         "gemini_backend": config.backend_label(),
         # DEFERRED: TicketGuard is not (yet) exposed as its own MCP server.
         "ticketguard_as_mcp_server": False,
+    }
+
+
+# --------------------------------------------------------------------------- #
+# GET /api/mcp/arize — Arize Phoenix observability integration (honest desc.)
+# --------------------------------------------------------------------------- #
+@app.get("/api/mcp/arize")
+async def arize_mcp_info():
+    """Describe the Arize Phoenix observability integration.
+
+    Phoenix exposes an MCP server (get_traces / get_spans / etc.) for querying the
+    traces this backend emits. Here we report what TicketGuard traces and where to
+    view it. ``enabled`` reflects whether PHOENIX_API_KEY is configured.
+    """
+    base_url = os.getenv("PHOENIX_BASE_URL", "https://app.phoenix.arize.com").rstrip("/")
+    project = os.getenv("PHOENIX_PROJECT", "ticketguard")
+    return {
+        "mcp_server": "Arize Phoenix",
+        "integration": "openinference-instrumentation-google-genai",
+        "transport": "OTLP/HTTP",
+        "tools_exposed": [
+            "get_traces", "get_spans", "get_projects", "get_prompts", "get_datasets",
+        ],
+        "dashboard_url": f"{base_url}/projects/{project}",
+        "what_is_traced": [
+            "All Gemini generate_content() / embed_content() calls (auto-instrumented)",
+            "Each of the 8 investigation steps (step_1_normalizer … step_8_persist)",
+            "MongoDB Atlas hybrid-search query (mongodb.hybrid_search)",
+            "Risk scoring (risk_scoring — in-app, honestly labelled)",
+        ],
+        "enabled": bool(os.getenv("PHOENIX_API_KEY")),
     }
 
 

@@ -15,6 +15,7 @@ HARD RULE: the core LLM is Google Gemini ONLY (gemini-2.5-flash). Embeddings go
 through the same google-genai path (EMBED_MODEL). No non-Google LLM is added.
 """
 
+import logging
 import os
 from dotenv import load_dotenv
 
@@ -25,13 +26,36 @@ def _truthy(val: str | None) -> bool:
     return str(val).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _valid_key(k: str | None) -> str:
+    """Return k stripped if it looks like a real key, else empty string."""
+    if not k:
+        return ""
+    k = k.strip()
+    if k.startswith("your") or k.startswith("<") or k == "px-your-key-here":
+        return ""
+    return k
+
+
 # --------------------------------------------------------------------------- #
 # Gemini / Google Cloud
 # --------------------------------------------------------------------------- #
 USE_VERTEX: bool = _truthy(os.getenv("GOOGLE_GENAI_USE_VERTEXAI"))
-GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY", "")
 GOOGLE_CLOUD_PROJECT: str = os.getenv("GOOGLE_CLOUD_PROJECT", "")
 GOOGLE_CLOUD_LOCATION: str = os.getenv("GOOGLE_CLOUD_LOCATION", "us-central1")
+
+# Multi-key pool: primary key + up to 2 backup keys (each has its own free-tier
+# quota bucket). Rotation is triggered automatically on 429 / RESOURCE_EXHAUSTED.
+# Add GEMINI_API_KEY_2 and GEMINI_API_KEY_3 to .env to enable rotation.
+_KEY_SLOTS = [
+    os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY", ""),
+    os.getenv("GEMINI_API_KEY_2", ""),
+    os.getenv("GEMINI_API_KEY_3", ""),
+]
+AVAILABLE_API_KEYS: list[str] = [_valid_key(k) for k in _KEY_SLOTS if _valid_key(k)]
+
+# Active key — starts at slot 0; rotate_api_key() advances this forward.
+_current_key_index: int = 0
+GOOGLE_API_KEY: str = AVAILABLE_API_KEYS[0] if AVAILABLE_API_KEYS else ""
 
 # HARD RULE: gemini-2.5-flash is the required core model. Override only via env
 # if a key genuinely lacks it; do NOT swap in a non-Google model.
@@ -41,7 +65,7 @@ EMBED_DIMS: int = int(os.getenv("EMBED_DIMS", "768"))
 
 # Make the AI Studio key visible to google-genai / ADK under the name they read.
 if not USE_VERTEX and GOOGLE_API_KEY:
-    os.environ.setdefault("GOOGLE_API_KEY", GOOGLE_API_KEY)
+    os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
     os.environ["GOOGLE_GENAI_USE_VERTEXAI"] = "FALSE"
 
 
@@ -85,6 +109,41 @@ OFFICIAL_DOMAINS: list[str] = [
 ]
 
 
+def rotate_api_key() -> bool:
+    """Advance to the next available Gemini API key and update the live environment.
+
+    Call this when a 429 / RESOURCE_EXHAUSTED is received so the next Gemini
+    request uses a fresh quota bucket. Returns True if a new key was activated,
+    False when all keys are exhausted (caller should degrade gracefully).
+
+    No-op in Vertex AI mode (credentials are OAuth, not API keys).
+    """
+    global _current_key_index, GOOGLE_API_KEY
+    if USE_VERTEX:
+        return False  # Vertex AI uses OAuth credentials — no API-key rotation
+    next_idx = _current_key_index + 1
+    if next_idx >= len(AVAILABLE_API_KEYS):
+        logging.warning(
+            "API key rotation: all %d key(s) exhausted — falling back to rule engine.",
+            len(AVAILABLE_API_KEYS),
+        )
+        return False
+    _current_key_index = next_idx
+    GOOGLE_API_KEY = AVAILABLE_API_KEYS[next_idx]
+    os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
+    logging.info(
+        "API key rotated to slot %d/%d.",
+        next_idx + 1,
+        len(AVAILABLE_API_KEYS),
+    )
+    return True
+
+
+def current_api_key() -> str:
+    """Return the API key currently in use (for diagnostics only — never log it)."""
+    return GOOGLE_API_KEY
+
+
 def mongo_configured() -> bool:
     uri = MONGODB_URI
     return bool(uri) and "<" not in uri and "your" not in uri.lower()
@@ -93,8 +152,7 @@ def mongo_configured() -> bool:
 def gemini_configured() -> bool:
     if USE_VERTEX:
         return bool(GOOGLE_CLOUD_PROJECT)
-    key = GOOGLE_API_KEY
-    return bool(key) and not key.startswith("your") and not key.startswith("<")
+    return bool(_valid_key(GOOGLE_API_KEY))
 
 
 def backend_label() -> str:
