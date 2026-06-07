@@ -1,14 +1,38 @@
 # TicketGuard — Action Handoff for Arman (2026-06-07)
 
-**Everything is live and working except ONE backend item: Step-2 hybrid retrieval.**
-Fixing it is ~5 minutes and one script. Details below.
+**UPDATE (brutal QA, 9 personas hammering the live engine): the live engine is mostly DOWN.**
+The Gemini **free-tier quota is exhausted** → `/api/check` returns `429 RESOURCE_EXHAUSTED` for most
+inputs (only ~6 of 23 test inputs got a verdict). Detection *logic* is good (correct SCAM calls, even
+in Spanish) — it just can't run. **#1 = fix the quota. #2 = step-2 indexes.** I've already pushed code
+resilience fixes (rule-engine fallback, input guard, error sanitizer) — they go live on the next redeploy.
 
 Live: frontend https://frontend-nu-ochre-z41mw3z0l5.vercel.app · backend https://pitchcraft-agent.onrender.com
 Repo branch: `ticketguard` (all my fixes are pushed).
 
 ---
 
-## 🔴 #1 — Fix Step-2 (Hybrid Retrieval) — HIGH IMPACT, ~5 min
+## 🔴 #1 — URGENT: Gemini quota exhausted (live outage)
+
+Brutal QA: `curl /api/check` returns `429 RESOURCE_EXHAUSTED` (primary **and** fallback model) for most
+inputs. The product effectively does nothing for users right now.
+
+**Fix (do this first):**
+1. **Get a fresh Gemini API key with quota** (new Google AI Studio key, or — better for a demo —
+   enable billing / use a paid key so RPM/RPD limits don't trip). Free tier is too low for a live demo.
+2. On **Render → Environment**, set `GEMINI_API_KEY` (or `GOOGLE_API_KEY`) to the new key. Keep
+   `USE_VERTEXAI=FALSE`, `GEMINI_MODEL=gemini-2.5-flash`.
+3. Redeploy. This also picks up my pushed code fixes:
+   - **Rule-engine fallback** — if the LLM is ever rate-limited, the verdict now degrades to the
+     deterministic engine instead of erroring (no more raw 429 to users).
+   - **Input-sufficiency guard** — junk like `"hello"` no longer returns a fabricated `LIKELY-LEGIT@0.8`.
+   - **Error sanitizer** — `/api/check` no longer leaks Gemini/ADK/429 billing text to clients.
+4. Verify: `curl -X POST https://pitchcraft-agent.onrender.com/api/check -H "content-type: application/json" -d '{"type":"text","text":"Selling WC tickets Zelle only, PDF after payment"}'` → expect `"verdict":"SCAM"`. And `"hello"` → should NOT be LIKELY-LEGIT.
+
+(Optional resilience: a non-LLM regex normalizer would let the pipeline run with ZERO LLM quota — not built yet; the fresh key is the real fix.)
+
+---
+
+## 🔴 #2 — Fix Step-2 (Hybrid Retrieval) — ~5 min
 
 **Symptom:** `/api/health` shows `"vector_index": false, "text_index": false`. In an investigation, Step-2 (Hybrid Retrieval) shows **"not configured · search_indexes_missing."**
 
