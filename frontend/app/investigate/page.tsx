@@ -602,6 +602,12 @@ function InvestigateContent() {
                   {isRunning ? "Investigating…" : (<><Search size={16} strokeWidth={2.4} /> Investigate this listing <ArrowRight size={15} strokeWidth={2.4} /></>)}
                 </motion.button>
 
+                {runError && !submitted && (
+                  <p className="text-xs mt-3 px-3 py-2.5 rounded-lg" style={{ background: "var(--tg-warn-tint)", color: "var(--tg-warn)", border: "1px solid var(--tg-warn-border)" }}>
+                    {runError}
+                  </p>
+                )}
+
                 {/* quick example pills (text only) */}
                 {ingest === "text" && (
                   <motion.div variants={fadeUpItem} className="mt-6">
