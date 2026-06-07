@@ -41,7 +41,7 @@ const STATS = [
 ]
 
 export default function Footer() {
-  const year = new Date().getFullYear()
+  const year = 2026  // pinned (deterministic SSR/client — avoids hydration drift)
   const reduced = usePrefersReducedMotion()
 
   return (

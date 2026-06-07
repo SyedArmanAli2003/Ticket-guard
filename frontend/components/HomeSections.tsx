@@ -352,7 +352,7 @@ export default function HomeSections() {
           >
             {[
               { v: `${Math.round(EVAL.recall * 100)}%`, l: "seeded-scam recall" },
-              { v: EVAL.corpusSize.toLocaleString(), l: "corpus listings" },
+              { v: EVAL.corpusSize.toLocaleString("en-US"), l: "corpus listings" },
               { v: EVAL.patternsTracked, l: "scam patterns tracked" },
               { v: `${(EVAL.medianLatencyMs / 1000).toFixed(1)}s`, l: "median investigation" },
             ].map(m => (
